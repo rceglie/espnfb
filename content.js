@@ -5,6 +5,17 @@
   }, 3000);
 })();
 
+// receive
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  console.log(request.message)
+  localStorage.setItem("battingstats", request.batting)
+  localStorage.setItem("pitchingstats", request.pitching)
+  sendResponse({ response: 'Message received in content.js' });
+});
+
+// send
+chrome.runtime.sendMessage({ message: 'Hello from content.js!' });
+
 function setHandlers() {
   var reloaded = false;
   const observer = new MutationObserver(function (mutations) {
@@ -22,8 +33,6 @@ function setHandlers() {
   });
   const divElement =
     document.querySelector("div.layout.is-full").firstChild.firstChild;
-  //console.log("observing:");
-  //console.log(divElement);
   observer.observe(divElement, {
     attributes: true,
     childList: true, //, subtree: true
@@ -32,10 +41,6 @@ function setHandlers() {
 
 function mainProgram() {
   var basediv = getBaseDiv();
-
-
-  var found = document.getElementById("advanced-table")
-
   if (!basediv["result"]){  // Wrong page (no stat tables)
     return;
   } else {
@@ -44,21 +49,6 @@ function mainProgram() {
     createTable();
     insertData(basediv["element"], false, basediv["type"]);
   }
-  
-  
-  // else if (found != undefined) {  // Advanced table already exists
-  //   console.log("Headers already exist");
-  //   if (localStorage.getItem("type") != basediv["type"]){
-  //     console.log("Need to change headers")
-  //     createHeader(basediv["element"], basediv["type"])
-  //   }
-  //   insertData(basediv["element"], true, basediv["type"]);
-  // } else {  // Need to make advanced table
-  //   console.log("First time loading");
-  //   localStorage.setItem("type", basediv["type"])
-  //   createHeader(basediv["element"], basediv["type"]);
-  //   insertData(basediv["element"], false, basediv["type"]);
-  // }
 }
 
 function createTable() {
@@ -89,7 +79,7 @@ function createTable() {
   thead.appendChild(tr1)
   var th1 = document.createElement('th')
   th1.setAttribute("title", "Advanced Stats")
-  th1.setAttribute("colspan", "2")
+  th1.setAttribute("colspan", `${pitchingstats.length}`)
   th1.className = "tc bg-clr-white Table__TH"
   th1.innerHTML = "Advanced Stats"
   tr1.appendChild(th1)
@@ -99,31 +89,23 @@ function createTable() {
   tr2.setAttribute("style", "height: auto;")
   thead.appendChild(tr2)
 
-  var th2 = document.createElement('th')
-  th2.className = "Table__TH first"
-  tr2.appendChild(th2)
-  var div = document.createElement('div')
-  div.className = "jsx-2810852873 table--cell tar header"
-  th2.appendChild(div)
-  var span = document.createElement('span')
-  span.innerHTML = "xERA"
-  div.appendChild(span)
-
-  var th3 = document.createElement('th')
-  th3.className = "Table__TH second"
-  tr2.appendChild(th3)
-  var div2 = document.createElement('div')
-  div2.className = "jsx-2810852873 table--cell tar header"
-  th3.appendChild(div2)
-  var span2 = document.createElement('span')
-  span2.innerHTML = "FIP"
-  div2.appendChild(span2)
+  pitchingstats.forEach((stat) => {
+    var th = document.createElement('th')
+    th.className = `Table__TH ${stat}`
+    tr2.appendChild(th)
+    var div = document.createElement('div')
+    div.className = "jsx-2810852873 table--cell tar header"
+    th.appendChild(div)
+    var span = document.createElement('span')
+    span.innerHTML = stat
+    div.appendChild(span)
+  })
 
   var tbody = document.createElement('tbody');
   tbody.className = "Table__TBODY"
 
   // Step 2: Populate the table with rows and cells
-  for (let i = 0; i <= masterList.childNodes.length; i++) {
+  for (let i = 0; i < masterList.childNodes.length; i++) {
     const row = document.createElement('tr');
     row.className = "Table__TR Table__TR--lg Table__odd"
     row.setAttribute("style", "height: auto;")

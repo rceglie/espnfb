@@ -1,13 +1,54 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>Covid-19 Stats- UK</title>
-    <meta charset="utf-8">
-</head>
-<body>
-    <div class="container mt-3" style="width: 450px;">
-        <p>text</p>
+    <meta charset="utf-8" />
+    <script type="module" src="popup.js"></script>
+  </head>
+  <body>
+    <div id="container">
+      <button id="btn">Click</button>
+      <h3>Select up to three options:</h3>
+      <div>
+        <form>
+          <label>
+            <input
+              type="checkbox"
+              name="option"
+              value="Option 1"
+              id="op1"
+            />
+            Option 1
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              name="option"
+              value="Option 2"
+              id="op2"
+            />
+            Option 2
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              name="option"
+              value="Option 3"
+              id="op3"
+            />
+            Option 3
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              name="option"
+              value="Option 4"
+              id="op4"
+            />
+            Option 4
+          </label>
+        </form>
+      </div>
     </div>
-</body>
-<script lang="javascript" src="dist/xlsx.full.min.js"></script>
+  </body>
 </html>

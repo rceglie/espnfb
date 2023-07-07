@@ -1,23 +1,17 @@
 {
-    "name": "ESPN Fantasy Baseball Plus",
-    "version": "0.1.0",
-    "description": "more espn fantasy baseball stats",
-    "manifest_version": 3,
-    "author": "Robert Ceglie",
-    "background": {
-        "service_worker": "background.js"
-    },
-    "content_scripts": [ {
-        "matches": ["<all_urls>"],
-        "js": ["content.js"]
-      } ],
-    "action": {
-        "default_popup": "index.html"
-    },
-    "resources" : [
-        "mapping.json"
-    ],
-    "permissions" : [
-        "file:///*"
-    ]
-  }
+  "name": "ESPN Fantasy Baseball Plus",
+  "version": "0.1.0",
+  "description": "more espn fantasy baseball stats",
+  "manifest_version": 3,
+  "author": "Robert Ceglie",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js", "popup.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "index.html"
+  },
+  "permissions": ["storage"]
+}
