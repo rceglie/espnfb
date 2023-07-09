@@ -1,8 +1,23 @@
-(() => {
-  setTimeout(function () {
-    setHandlers();
-    mainProgram();
-  }, 3000);
+let elapsedTime = 0
+const intervalId = setInterval(() => {
+  var basediv = getBaseDiv()
+  if (basediv["result"]) {
+    clearInterval(intervalId)
+    console.log("Page Loaded")
+    setHandlers()
+    mainProgram(basediv)
+    return;
+  }
+  elapsedTime += 1;
+  if (elapsedTime >= 10) {
+    clearInterval(intervalId);
+  }
+}, 1000);
+
+var STATS_CONFIG;
+(async () => {
+  const src = chrome.runtime.getURL("stats.js");
+  STATS_CONFIG = (await import(src)).default;
 })();
 
 // Communicate with popup
@@ -23,7 +38,7 @@ function setHandlers() {
       reloaded = true;
       console.log("Page change detected. Beginning addon.");
       setTimeout(function () {
-        mainProgram();
+        mainProgram(getBaseDiv());
       }, 3000);
     } else {
       setTimeout(function () {
@@ -39,8 +54,7 @@ function setHandlers() {
   });
 }
 
-function mainProgram() {
-  var basediv = getBaseDiv();
+function mainProgram(basediv) {
   var stype = basediv["type"];
   if (!basediv["result"]) {
     // Wrong page (no stat tables)
@@ -53,9 +67,6 @@ function mainProgram() {
     if (stats.length > 0) {
       createTable(stats);
       insertData(basediv["element"], stype, stats);
-      setTimeout(function () {
-        colorCode(stats);
-      }, 3000);
     }
   }
 }
@@ -172,7 +183,9 @@ function getBaseDiv() {
 }
 
 function insertData(basediv, stattype, stats) {
-  basediv.childNodes[3].childNodes.forEach((player, index) => {
+  var targetdiv = basediv.childNodes[3].childNodes
+  var counter = 0
+  targetdiv.forEach((player, index) => {
     var playerName = document.querySelectorAll(`[data-idx="${index}"]`)[0]
       .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
       .childNodes[0].childNodes[0].childNodes[0].innerHTML;
@@ -191,11 +204,15 @@ function insertData(basediv, stattype, stats) {
           stats.forEach((stat) => {
             try {
               document.getElementById(`${stat}-idx-${index}`).innerHTML =
-                "&nbsp" + data[stat].toFixed(CODING[stat]["round"]) + "&nbsp";
+                "&nbsp" + data[stat].toFixed(STATS_CONFIG[stattype][stat]["round"]) + "&nbsp";
             } catch (err) {
               console.log(err);
             }
           });
+        }
+        counter += 1
+        if (counter === targetdiv.length){
+          colorCode(stattype, stats)
         }
       }
     );
@@ -220,6 +237,7 @@ function getPlayerData(name, team, pos, stattype, stats) {
           obj["Season"].includes("season=2023") && obj["AbbLevel"] == "MLB" //&& obj["Team"] === "Average"
       );
       if (foundObject) {
+        console.log(foundObject)
         var result = {};
         stats.forEach((key) => {
           result[key] = foundObject[key];
@@ -255,7 +273,7 @@ function getFangraphsID(name, team) {
   // }
 }
 
-function colorCode(stats) {
+function colorCode(stattype, stats) {
   stats.forEach((stat) => {
     var elems = document.getElementsByClassName(`${stat}-span`);
     var values = [];
@@ -274,7 +292,7 @@ function colorCode(stats) {
       var num = value["value"];
       const normalizedValue = (num - min) / (max - min);
       let color = "";
-      if (!CODING[stat]["color"]) {
+      if (!STATS_CONFIG[stattype][stat]["color"]) {
         // green = lower
         color = `hsl(${((1 - normalizedValue) * 120).toString(10)}, 100%, 80%)`;
       } else {
@@ -289,19 +307,21 @@ function colorCode(stats) {
   });
 }
 
-const CODING = {
-  // true = higher is better, false = lower is better
-  AVG: {"color": true, "round": 3},
-  OPS: {"color": true, "round": 3},
-  BABIP: {"color": true, "round": 3},
-  "wRC+": {"color": true, "round": 0},
-  ERA: {"color": false, "round": 2},
-  xERA: {"color": false, "round": 2},
-  FIP: {"color": false, "round": 2},
-  xFIP: {"color": false, "round": 2},
-  WHIP: {"color": false, "round": 2},
-  BABIP: {"color": false, "round": 3},
-};
+// const CODING = {
+//   // true = higher is better, false = lower is better
+//   AVG: {"color": true, "round": 3},
+//   OPS: {"color": true, "round": 3},
+//   BABIP: {"color": true, "round": 3},
+//   "wRC+": {"color": true, "round": 0},
+//   ERA: {"color": false, "round": 2},
+//   xERA: {"color": false, "round": 2},
+//   FIP: {"color": false, "round": 2},
+//   xFIP: {"color": false, "round": 2},
+//   WHIP: {"color": false, "round": 2},
+//   BABIP: {"color": false, "round": 3},
+//   "ERA-": {"color": false, "round": 0},
+//   "FIP-": {"color": false, "round": 0},
+// };
 
 var mapping = [
   {

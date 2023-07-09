@@ -6,12 +6,16 @@
   "author": "Robert Ceglie",
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js", "popup.js"]
+      "matches": ["https://fantasy.espn.com/baseball/*"],
+      "js": ["content.js", "popup.js", "stats.js"]
     }
   ],
   "action": {
     "default_popup": "index.html"
   },
-  "permissions": ["storage"]
+  "permissions": ["storage"],
+  "web_accessible_resources": [{
+    "matches": ["<all_urls>"],
+    "resources": ["stats.js"]
+  }]
 }
