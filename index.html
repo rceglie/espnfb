@@ -4,50 +4,116 @@
     <title>Covid-19 Stats- UK</title>
     <meta charset="utf-8" />
     <script type="module" src="popup.js"></script>
+    <link rel="stylesheet" href="index.css">
   </head>
   <body>
     <div id="container">
-      <button id="btn">Click</button>
-      <h3>Select up to three options:</h3>
-      <div>
-        <form>
-          <label>
-            <input
-              type="checkbox"
-              name="option"
-              value="Option 1"
-              id="op1"
-            />
-            Option 1
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              name="option"
-              value="Option 2"
-              id="op2"
-            />
-            Option 2
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              name="option"
-              value="Option 3"
-              id="op3"
-            />
-            Option 3
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              name="option"
-              value="Option 4"
-              id="op4"
-            />
-            Option 4
-          </label>
-        </form>
+      <h1 class="top">Advanced Stats Config</h1>
+      <p class="middle">Select up to 3 stats for each category. Saves automatically. Refresh page to see changes.</p>
+      <div class="bottom border">
+        <div class="left border">
+            <h3>Batting</h3>
+            <div class="options">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="option"
+                    value="AVG"
+                    class="batting"
+                  />
+                  AVG
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="option"
+                    value="OPS"
+                    class="batting"
+                  />
+                  OPS
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="option"
+                    value="BABIP"
+                    class="batting"
+                  />
+                  BABIP
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="option"
+                    value="wRC+"
+                    class="batting"
+                  />
+                  wRC+
+                </label>
+            </div>
+        </div>
+        <div class="middle2 border">
+            <h3>Pitching</h3>
+            <div class="options">
+              <label>
+                <input
+                  type="checkbox"
+                  name="option"
+                  value="WHIP"
+                  class="pitching"
+                />
+                WHIP
+              </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="option"
+                    value="ERA"
+                    class="pitching"
+                  />
+                  ERA
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="option"
+                    value="xERA"
+                    class="pitching"
+                  />
+                  xERA
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="option"
+                    value="FIP"
+                    class="pitching"
+                  />
+                  FIP
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="option"
+                    value="xFIP"
+                    class="pitching"
+                  />
+                  xFIP
+                </label>
+                <label>
+                    <input
+                      type="checkbox"
+                      name="option"
+                      value="BABIP"
+                      class="pitching"
+                    />
+                    BABIP
+                  </label>
+            </div>
+        </div>
+        <div class="right border">
+            <p>general</p>
+        </div>
       </div>
     </div>
   </body>

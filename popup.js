@@ -1,40 +1,54 @@
-import { getActiveTabURL } from "./utils.js";
+var config = {
+    batting: [],
+    pitching: [],
+    misc: []
+}
 
-var container1 = document.getElementById("container");
-document.getElementById("btn").addEventListener("click", btnClick)
-function btnClick() {
+// Get config from brower localStorage
+chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+    chrome.tabs.sendMessage(tabs[0].id, { data: "need config" }, function (res) {
+        config = res.response;
+        console.log("config:")
+        console.log(config)
+        // update batting + pitching checkboxes
+        Array.prototype.slice.call(document.getElementsByClassName("batting")).forEach((item) => {
+            console.log(item.value)
+            console.log(config.batting.includes(item.value))
+            item.checked = config.batting.includes(item.value)
+        })
+        Array.prototype.slice.call(document.getElementsByClassName("pitching")).forEach((item) => {
+            console.log(item.value)
+            console.log(config.pitching.includes(item.value))
+            item.checked = config.pitching.includes(item.value)
+        })
+    });
+  })
+
+function updateBrowser() {
     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, { message: 'Hello from popup.js!' });
+        chrome.tabs.sendMessage(tabs[0].id, { data: config });
       });
 }
 
-
-
-var checkboxes = document.getElementsByName("option")
-for (var i = 0; i < checkboxes.length; i++) {
-    checkboxes[i].addEventListener('click', limitCheckBoxes);
-}
+document.getElementsByName("option").forEach((checkbox) => {
+    checkbox.addEventListener('click', limitCheckBoxes)
+})
 
 function limitCheckBoxes() {
-    var checkedCount = 0;
 
-    for (var i = 0; i < checkboxes.length; i++) {
-        if (checkboxes[i].checked) {
-            checkedCount++;
-        }
+    console.log(this.className)
+    console.log(config)
+    console.log(config[this.className])
+
+    if (!this.checked) {
+        config[this.className] = config[this.className].filter(item => item !== this.value)
+        updateBrowser()
+    // } else if (config[this.className].length >= 3) {
+    //         this.checked = false;
+    } else {
+        config[this.className].push(this.value)
+        updateBrowser()
     }
 
-    if (checkedCount > 3) {
-        this.checked = false;
-    }
+    console.log(config)
 }
-
-
-
-// receive
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.message === 'Hello from content.js!') {
-      console.log('Message received in popup.js');
-      sendResponse({ response: 'Message received in popup.js' });
-    }
-  });
