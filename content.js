@@ -48,8 +48,7 @@ function mainProgram() {
   } else {
     console.log("Remaking tables");
     localStorage.setItem("type", stype);
-    // see if any stats are selected
-    // pass in selected stats
+    console.log(localStorage.getItem("addon-config"))
     var stats = JSON.parse(localStorage.getItem("addon-config"))[stype];
     if (stats.length > 0) {
       createTable(stats);
