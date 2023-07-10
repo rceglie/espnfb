@@ -240,7 +240,19 @@ function getPlayerData(name, team, pos, stattype, stats) {
         console.log(foundObject)
         var result = {};
         stats.forEach((key) => {
-          result[key] = foundObject[key];
+          if (key === "dERA"){
+            result[key] = foundObject["ERA"] - foundObject["xERA"];
+          } else if (key === "dFIP") {
+            result[key] = foundObject["FIP"] - foundObject["xFIP"];
+          } else if (key === "dFIP-") {
+            result[key] = foundObject["xFIP-"] - foundObject["FIP-"];
+          } else if (key === "dAVG") {
+            result[key] = foundObject["xAVG"] - foundObject["AVG"];
+          } else if (key === "dwOBA") {
+            result[key] = foundObject["xwOBA"] - foundObject["wOBA"];
+          } else {
+            result[key] = foundObject[key];
+          }
         });
         return result;
       } else {
@@ -324,6 +336,36 @@ function colorCode(stattype, stats) {
 // };
 
 var mapping = [
+  {
+    PLAYERNAME: "Gunnar Henderson",
+    IDFANGRAPHS: "26289",
+    TEAM: "N/A",
+  },
+  {
+    IDPLAYER: "",
+    PLAYERNAME: "Brayan Bello",
+    BIRTHDATE: "",
+    FIRSTNAME: "Brayan",
+    LASTNAME: "Bello",
+    TEAM: "N/A",
+    LG: "N/A",
+    POS: "P",
+    IDFANGRAPHS: "23920",
+    MLBID: "",
+    CBSID: "",
+    RETROID: "",
+    BREFID: "",
+    ESPNID: "",
+    DAVENPORTID: "",
+    BPID: "",
+    YAHOOID: "",
+    BATS: "",
+    THROWS: "R",
+    ROTOWIREID: "",
+    OTTONEUID: "",
+    ALLPOS: "P",
+    ACTIVE: "Y",
+  },
   {
     IDPLAYER: "aardsda01",
     PLAYERNAME: "David Aardsma",
