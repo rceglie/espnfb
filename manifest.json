@@ -4,6 +4,9 @@
   "description": "more espn fantasy baseball stats",
   "manifest_version": 3,
   "author": "Robert Ceglie",
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["https://fantasy.espn.com/baseball/*"],
@@ -13,7 +16,8 @@
   "action": {
     "default_popup": "index.html"
   },
-  "permissions": ["storage"],
+  "host_permissions": ["*://*/*"],
+  "permissions": ["storage", "tabs", "scripting", "activeTab"],
   "web_accessible_resources": [
     {
       "matches": ["<all_urls>"],

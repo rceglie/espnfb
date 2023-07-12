@@ -1,6 +1,7 @@
 let elapsedTime = 0;
 const intervalId = setInterval(() => {
   var basediv = getBaseDiv();
+  console.log("basediv:", basediv);
   if (basediv["result"]) {
     clearInterval(intervalId);
     console.log("Page Loaded");
@@ -13,6 +14,11 @@ const intervalId = setInterval(() => {
     clearInterval(intervalId);
   }
 }, 1000);
+
+let url = "";
+getCurrentUrl({ message: "getURL" }).then((response) => {
+  url = response.url;
+});
 
 var STATS_CONFIG;
 (async () => {
@@ -61,31 +67,87 @@ function setHandlers() {
 }
 
 function mainProgram(basediv) {
-  var stype = basediv["type"];
   if (!basediv["result"]) {
     // Wrong page (no stat tables)
     return;
   } else {
-    console.log("Remaking tables");
-    localStorage.setItem("type", stype);
-    console.log(localStorage.getItem("addon-config"));
-    var stats = JSON.parse(localStorage.getItem("addon-config"))[stype];
-    if (stats.length > 0) {
-      createTable(stats);
-      insertData(basediv["element"], stype, stats);
+    if (url.includes("fantasy.espn.com/baseball/team")) {
+      var stats = JSON.parse(localStorage.getItem("addon-config"))["batting"];
+      if (stats.length > 0) {
+        createTable(basediv["element"][0], "batting", stats);
+        insertData(basediv["element"][0], "batting", stats);
+      }
+      stats = JSON.parse(localStorage.getItem("addon-config"))["pitching"];
+      if (stats.length > 0) {
+        createTable(basediv["element"][1], "pitching", stats);
+        insertData(basediv["element"][1], "pitching", stats);
+      }
+    } else {
+      var stats = JSON.parse(localStorage.getItem("addon-config"))[
+        basediv["type"]
+      ];
+      if (stats.length > 0) {
+        createTable(basediv["element"], basediv["type"], stats);
+        insertData(basediv["element"], basediv["type"], stats);
+      }
     }
   }
 }
 
-function createTable(stats) {
-  var basediv = getBaseDiv();
-  var masterList =
-    basediv["element"].parentElement.parentElement.parentElement.firstChild
-      .childNodes[4];
-  var base = basediv["element"].parentElement.parentElement.parentElement;
+function getBaseDiv() {
+  var temp = "";
+  var basediv = "";
+  var teamonly = ["", ""];
+  Array.from(document.getElementsByTagName("th")).forEach((element) => {
+    const title = element.getAttribute("title");
+    if (url.includes("fantasy.espn.com/baseball/team")) {
+      if (title === "Batters") {
+        teamonly[0] =
+          element.parentElement.parentElement.parentElement.parentElement;
+        teamonly[0]
+          .querySelectorAll("tr")
+          .forEach((tr) => tr.setAttribute("table", "batting"));
+      } else if (title === "Pitchers") {
+        teamonly[1] =
+          element.parentElement.parentElement.parentElement.parentElement;
+        teamonly[1]
+          .querySelectorAll("tr")
+          .forEach((tr) => tr.setAttribute("table", "pitching"));
+      }
+      if (teamonly[0] !== "" && teamonly[1] != +"") {
+        basediv = teamonly;
+      }
+    } else if (title === "Batters") {
+      temp = "batting";
+      basediv = element.parentElement.parentElement.parentElement.parentElement;
+    } else if (title === "Pitchers") {
+      temp = "pitching";
+      basediv = element.parentElement.parentElement.parentElement.parentElement;
+    }
+  });
+
+  if (basediv === "") {
+    return { result: false, element: "", type: "" };
+  } else {
+    return {
+      result: true,
+      element: basediv,
+      type: temp,
+    };
+  }
+}
+
+function createTable(basediv, stype, stats) {
+  if (url.includes("fantasy.espn.com/baseball/team")) {
+    var masterList = basediv.firstChild.childNodes[3];
+  } else {
+    var masterList = basediv.firstChild.childNodes[4];
+  }
+
+  console.log("Player list: ", masterList);
 
   // Remove old table
-  const oldTable = document.getElementById("advanced-table");
+  const oldTable = document.getElementById(`advanced-table-${stype}`);
   oldTable?.remove();
 
   // Create the new table and its structure
@@ -95,7 +157,7 @@ function createTable(stats) {
     "style",
     "border-collapse: collapse; border-spacing: 0px;"
   );
-  table.id = "advanced-table";
+  table.id = `advanced-table-${stype}`;
 
   var thead = document.createElement("thead");
   thead.className = "Table__header-group Table__THEAD";
@@ -157,50 +219,49 @@ function createTable(stats) {
   // Append the table to the div element
   table.appendChild(thead);
   table.appendChild(tbody);
-  base.appendChild(table);
+  basediv.appendChild(table);
 }
 
-function getBaseDiv() {
-  var temp = "";
-  const thElement = Array.from(document.getElementsByTagName("th")).find(
-    (element) => {
-      const title = element.getAttribute("title");
-      if (title === "2023 SEASON Batting") {
-        temp = "batting";
-      } else if (title === "2023 SEASON Pitching") {
-        temp = "pitching";
-      }
-      return (
-        title &&
-        (title.includes("2023 SEASON Batting") ||
-          title.includes("2023 SEASON Pitching"))
-      );
-    }
-  );
-  if (thElement === undefined) {
-    return { result: false, element: "", type: "" };
-  } else {
-    return {
-      result: true,
-      element: thElement.parentElement.parentElement.parentElement,
-      type: temp,
-    };
-  }
+function getCurrentUrl(message) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      resolve(response);
+    });
+  });
 }
 
 function insertData(basediv, stattype, stats) {
-  var targetdiv = basediv.childNodes[3].childNodes;
+  var premadetable = document.getElementById(`advanced-table-${stattype}`)
+    .childNodes[1].childNodes;
+  console.log(premadetable);
   var counter = 0;
-  targetdiv.forEach((player, index) => {
-    var playerName = document.querySelectorAll(`[data-idx="${index}"]`)[0]
-      .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
-      .childNodes[0].childNodes[0].childNodes[0].innerHTML;
-    var playerTeam = document.querySelectorAll(`[data-idx="${index}"]`)[0]
-      .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
-      .childNodes[1].childNodes[0].innerHTML;
-    var playerPos = document.querySelectorAll(`[data-idx="${index}"]`)[0]
-      .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
-      .childNodes[1].childNodes[1].innerHTML;
+  premadetable.forEach((player, index) => {
+    if (url.includes("fantasy.espn.com/baseball/team")) {
+      try {
+        var playerName = document.querySelectorAll(
+          `[data-idx="${index}"][table=${stattype}]`
+        )[0].childNodes[1].firstChild.firstChild.childNodes[1].firstChild
+          .firstChild.firstChild.firstChild.innerHTML;
+        var playerTeam = document.querySelectorAll(
+          `[data-idx="${index}"][table=${stattype}]`
+        )[0].childNodes[1].firstChild.firstChild.childNodes[1].firstChild
+          .childNodes[1].firstChild.innerHTML;
+        var playerPos = "";
+      } catch (error) {
+        console.log(error);
+      }
+      console.log(playerName, playerTeam);
+    } else {
+      var playerName = document.querySelectorAll(`[data-idx="${index}"]`)[0]
+        .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
+        .childNodes[0].childNodes[0].childNodes[0].innerHTML;
+      var playerTeam = document.querySelectorAll(`[data-idx="${index}"]`)[0]
+        .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
+        .childNodes[1].childNodes[0].innerHTML;
+      var playerPos = document.querySelectorAll(`[data-idx="${index}"]`)[0]
+        .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
+        .childNodes[1].childNodes[1].innerHTML;
+    }
 
     getPlayerData(playerName, playerTeam, playerPos, stattype, stats).then(
       (data) => {
@@ -223,7 +284,7 @@ function insertData(basediv, stattype, stats) {
         counter += 1;
         if (
           JSON.parse(localStorage.getItem("addon-config")).color &&
-          counter === targetdiv.length
+          counter === premadetable.length
         ) {
           colorCode(stattype, stats);
         }
