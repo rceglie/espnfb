@@ -4,25 +4,30 @@
     <title>Covid-19 Stats- UK</title>
     <meta charset="utf-8" />
     <script type="module" src="popup.js"></script>
-    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="index.css" />
   </head>
   <body>
     <div id="container">
       <h1 class="top">Advanced Stats Config</h1>
-      <p class="middle">Select stats for each category. Saves automatically. Refresh page to see changes.</p>
+      <p class="middle">
+        Select stats for each category. Saves automatically. Refresh page to see
+        changes.
+      </p>
       <div class="bottom border">
         <div class="left border">
-            <h3>Batting</h3>
-            <div class="options" id="batting-options">
-            </div>
+          <h3>Batting</h3>
+          <div class="options" id="batting-options"></div>
         </div>
         <div class="middle2 border">
-            <h3>Pitching</h3>
-            <div class="options" id="pitching-options">
-            </div>
+          <h3>Pitching</h3>
+          <div class="options" id="pitching-options"></div>
         </div>
         <div class="right border">
-            <p>general</p>
+          <h3>General</h3>
+          <label>
+            <input type="checkbox" id="color-code" />
+            Color code stats (green is better)
+          </label>
         </div>
       </div>
     </div>

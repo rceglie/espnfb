@@ -4,6 +4,7 @@ var config = {
   batting: [],
   pitching: [],
   misc: [],
+  color: false,
 };
 
 Object.keys(STATS["pitching"]).forEach((stat, index) => {
@@ -42,6 +43,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     config = res.response;
     console.log("config:");
     console.log(config);
+    // update color checkbox
+    document.getElementById("color-code").checked = config.color;
     // update batting + pitching checkboxes
     Array.prototype.slice
       .call(document.getElementsByClassName("batting"))
@@ -83,3 +86,8 @@ function checkboxClick() {
 
   console.log(config);
 }
+
+document.getElementById("color-code").addEventListener("click", function () {
+  config.color = this.checked;
+  updateBrowser();
+});

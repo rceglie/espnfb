@@ -16,7 +16,7 @@ h3 {
 }
 
 .border {
-    border: 1px solid black;
+    /* border: 1px solid black; */
 }
 
 
@@ -38,12 +38,22 @@ h3 {
     justify-content: space-evenly;
 }
 
+.right {
+    width: 30%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 200px;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
 .left {
     width: 30%;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height:200px;
+    height: 200px;
 }
 
 .middle2 {
@@ -51,7 +61,7 @@ h3 {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height:200px;
+    height: 200px;
 }
 
 .options {
