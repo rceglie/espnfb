@@ -17,8 +17,20 @@ Object.keys(STATS["pitching"]).forEach((stat, index) => {
   input.className = "pitching";
   input.addEventListener("click", checkboxClick);
 
+  const div = document.createElement("div");
+  div.className = "has-tooltip";
+  div.innerHTML = "?";
+  const span = document.createElement("span");
+  span.className = "tooltip";
+  span.innerHTML = STATS["pitching"][stat].tooltip;
+  const newspan = document.createElement("span");
+  newspan.className = "tooltip-wrapper";
+  newspan.appendChild(span);
+  div.appendChild(newspan);
+
   label.appendChild(input);
   label.appendChild(document.createTextNode(stat));
+  label.appendChild(div);
   document.getElementById("pitching-options").appendChild(label);
 });
 
@@ -32,8 +44,20 @@ Object.keys(STATS["batting"]).forEach((stat, index) => {
   input.className = "batting";
   input.addEventListener("click", checkboxClick);
 
+  const div = document.createElement("div");
+  div.className = "has-tooltip";
+  div.innerHTML = "?";
+  const span = document.createElement("span");
+  span.className = "tooltip";
+  span.innerHTML = STATS["batting"][stat].tooltip;
+  const newspan = document.createElement("span");
+  newspan.className = "tooltip-wrapper";
+  newspan.appendChild(span);
+  div.appendChild(newspan);
+
   label.appendChild(input);
   label.appendChild(document.createTextNode(stat));
+  label.appendChild(div);
   document.getElementById("batting-options").appendChild(label);
 });
 

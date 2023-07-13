@@ -111,6 +111,15 @@ function getBaseDiv() {
         }
       });
 
+      var navbar = document.querySelectorAll(`[role="tablist"]`)[0];
+      if (navbar !== undefined) {
+        navbar.childNodes.forEach((item) => {
+          if (item.className.includes("active") && item.title !== "Stats") {
+            basediv = "";
+          }
+        });
+      }
+
       counter++;
       setTimeout(checkCondition, 500);
     };
@@ -377,9 +386,21 @@ function getFangraphsID(name, team) {
     console.log("No Fangraphs ID found for " + name + ". Contact author.");
     return -1;
   } else {
-    console.log(
-      "Multiple IDs found for the name " + name + ". Contact author."
+    const newFoundPlayers = foundPlayers.filter(
+      (obj) => obj.team.toLowerCase() === team.toLowerCase()
     );
+
+    console.log(newFoundPlayers);
+
+    if (newFoundPlayers?.length === 1) {
+      return newFoundPlayers[0].fid;
+    } else {
+      console.log(
+        "Multiple IDs found for " +
+          name +
+          " but could not identify which is correct. Contact author."
+      );
+    }
     return -1;
   }
 }
