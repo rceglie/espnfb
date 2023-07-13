@@ -32,3 +32,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     });
   }
 });
+
+// Event listener for tab update
+chrome.tabs.onCreated.addListener((tabId, changeInfo, tab) => {
+  chrome.tabs.sendMessage(tabId, {
+    message: "get ids",
+  });
+});

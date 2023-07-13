@@ -6,16 +6,11 @@ var STATS_CONFIG;
   STATS_CONFIG = (await import(src)).default;
 })();
 
-var mapping;
-(async () => {
-  const src = chrome.runtime.getURL("mapping.js");
-  mapping = (await import(src)).default;
-})();
-
 let url = "";
 
 // ------------- Communication with background and popup ------------- //
 
+// "host_permissions": ["*://*/*"], ["https://fantasy.espn.com/baseball/*"]
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.message === "page loaded") {
     chrome.runtime.sendMessage({ message: "get url" }, (response) => {
@@ -31,13 +26,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.message === "sending config") {
     localStorage.setItem("addon-config", JSON.stringify(request.data));
   }
+  if (request.message === "get ids") {
+    getids();
+  }
 });
+
+// ------------------------ Data fetching -----------------------------//
+
+var LOOKUP_TABLE;
+getids(); // remove later
+function getids() {
+  const sheetURL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxN3BwvlA5XdWCyukmR0o1myMbaShQieuLI5B7bHb3WwuhXCBbXX5b_zNngBj3kcczcni4lnhX7zEq/pub?gid=0&single=true&output=csv";
+
+  fetch(sheetURL)
+    .then((response) => response.text())
+    .then((data) => {
+      // Parse the data (CSV or other format) into JavaScript objects
+      const rows = data.split("\n").slice(1); // Exclude header row
+      const objects = rows.map((row) => {
+        const [name, team, pos, fid] = row.split(",");
+        return { name, team, pos, fid };
+      });
+      LOOKUP_TABLE = objects;
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
+}
 
 // ------------------------- Actual program -------------------------- //
 
 function pageChange() {
   getBaseDiv().then((basediv) => {
-    console.log("Basediv: ", basediv); // Result message
     setHandlers();
     mainProgram(basediv);
   });
@@ -102,9 +123,8 @@ function setHandlers() {
   const observer = new MutationObserver(function (mutations) {
     if (!reloaded) {
       reloaded = true;
-      console.log("Page change detected. Beginning addon.");
       setTimeout(function () {
-        mainProgram(getBaseDiv());
+        getBaseDiv().then((basediv) => mainProgram(basediv));
       }, 3000);
     } else {
       setTimeout(function () {
@@ -151,15 +171,15 @@ function mainProgram(basediv) {
 function createTable(basediv, stype, stats) {
   if (url.includes("fantasy.espn.com/baseball/team")) {
     var masterList = basediv.firstChild.childNodes[3];
+    var oldTable = document.getElementById(`advanced-table-${stype}`);
+    oldTable?.remove();
   } else {
     var masterList = basediv.firstChild.childNodes[4];
+    var oldTable = document.getElementById(`advanced-table-batting`);
+    oldTable?.remove();
+    oldTable = document.getElementById(`advanced-table-pitching`);
+    oldTable?.remove();
   }
-
-  console.log("Player list: ", masterList);
-
-  // Remove old table
-  const oldTable = document.getElementById(`advanced-table-${stype}`);
-  oldTable?.remove();
 
   // Create the new table and its structure
   var table = document.createElement("table");
@@ -236,9 +256,12 @@ function createTable(basediv, stype, stats) {
 function insertData(basediv, stattype, stats) {
   var premadetable = document.getElementById(`advanced-table-${stattype}`)
     .childNodes[1].childNodes;
-  console.log(premadetable);
   var counter = 0;
   premadetable.forEach((player, index) => {
+    counter += 1;
+    if (player === undefined) {
+      return;
+    }
     if (url.includes("fantasy.espn.com/baseball/team")) {
       try {
         var playerName = document.querySelectorAll(
@@ -251,9 +274,10 @@ function insertData(basediv, stattype, stats) {
           .childNodes[1].firstChild.innerHTML;
         var playerPos = "";
       } catch (error) {
-        console.log(error);
+        if (playerName !== undefined) {
+          console.log(error);
+        }
       }
-      console.log(playerName, playerTeam);
     } else {
       var playerName = document.querySelectorAll(`[data-idx="${index}"]`)[0]
         .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
@@ -265,13 +289,14 @@ function insertData(basediv, stattype, stats) {
         .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
         .childNodes[1].childNodes[1].innerHTML;
     }
+    if (playerName === undefined) {
+      return;
+    }
 
     getPlayerData(playerName, playerTeam, playerPos, stattype, stats).then(
       (data) => {
         if (data === null) {
-          console.log(
-            "Error getting data for " + playerName + ". Check Fangraphs ID."
-          );
+          console.log("Error getting data for " + playerName + ".");
         } else if (data !== "error") {
           stats.forEach((stat) => {
             try {
@@ -284,7 +309,6 @@ function insertData(basediv, stattype, stats) {
             }
           });
         }
-        counter += 1;
         if (
           JSON.parse(localStorage.getItem("addon-config")).color &&
           counter === premadetable.length
@@ -316,7 +340,6 @@ function getPlayerData(name, team, pos, stattype, stats) {
           obj["Season"].includes("season=2023") && obj["AbbLevel"] == "MLB" //&& obj["Team"] === "Average"
       );
       if (foundObject) {
-        console.log(foundObject);
         var result = {};
         stats.forEach((key) => {
           if (key === "dERA") {
@@ -342,26 +365,23 @@ function getPlayerData(name, team, pos, stattype, stats) {
 
 function getFangraphsID(name, team) {
   var foundPlayers = [];
-  mapping.forEach((player) => {
-    if (player.PLAYERNAME === name) {
+  LOOKUP_TABLE.forEach((player) => {
+    if (player.name === name) {
       foundPlayers.push(player);
     }
   });
   if (foundPlayers.length === 1) {
-    return foundPlayers[0].IDFANGRAPHS;
+    return foundPlayers[0].fid;
+  } else if (name === undefined) {
   } else if (foundPlayers.length === 0) {
-    console.log("No Fangraphs ID found for " + name + ".");
+    console.log("No Fangraphs ID found for " + name + ". Contact author.");
     return -1;
   } else {
-    console.log("Multiple IDs found for the name " + name);
+    console.log(
+      "Multiple IDs found for the name " + name + ". Contact author."
+    );
     return -1;
   }
-  // const player = mapping.find((player) => player.PLAYERNAME === name) // && player.TEAM === team.toUpperCase())
-  // if (player) {
-  //   return player.IDFANGRAPHS;
-  // } else {
-  //   return -10;
-  // }
 }
 
 function colorCode(stattype, stats) {
