@@ -1,24 +1,4 @@
-let elapsedTime = 0;
-const intervalId = setInterval(() => {
-  var basediv = getBaseDiv();
-  console.log("basediv:", basediv);
-  if (basediv["result"]) {
-    clearInterval(intervalId);
-    console.log("Page Loaded");
-    setHandlers();
-    mainProgram(basediv);
-    return;
-  }
-  elapsedTime += 1;
-  if (elapsedTime >= 10) {
-    clearInterval(intervalId);
-  }
-}, 1000);
-
-let url = "";
-getCurrentUrl({ message: "getURL" }).then((response) => {
-  url = response.url;
-});
+// ------------------ Import stats.js and mapping.js ----------------- //
 
 var STATS_CONFIG;
 (async () => {
@@ -32,16 +12,90 @@ var mapping;
   mapping = (await import(src)).default;
 })();
 
-// Communicate with popup
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.data === "need config") {
+let url = "";
+
+// ------------- Communication with background and popup ------------- //
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.message === "page loaded") {
+    chrome.runtime.sendMessage({ message: "get url" }, (response) => {
+      url = response.url;
+      pageChange();
+    });
+  }
+  if (request.message === "requesting config") {
     sendResponse({
       response: JSON.parse(localStorage.getItem("addon-config")),
     });
-  } else {
+  }
+  if (request.message === "sending config") {
     localStorage.setItem("addon-config", JSON.stringify(request.data));
   }
 });
+
+// ------------------------- Actual program -------------------------- //
+
+function pageChange() {
+  getBaseDiv().then((basediv) => {
+    console.log("Basediv: ", basediv); // Result message
+    setHandlers();
+    mainProgram(basediv);
+  });
+}
+
+function getBaseDiv() {
+  return new Promise((resolve) => {
+    let counter = 0;
+    var temp = "";
+    var basediv = "";
+    var teamonly = ["", ""];
+
+    const checkCondition = () => {
+      if (counter >= 10 || basediv !== "") {
+        if (basediv !== "") {
+          resolve({ result: true, element: basediv, type: temp });
+        } else {
+          resolve({ result: false, element: "", type: "" });
+        }
+        return;
+      }
+
+      Array.from(document.getElementsByTagName("th")).forEach((element) => {
+        const title = element.getAttribute("title");
+        if (url.includes("fantasy.espn.com/baseball/team")) {
+          if (title === "Batters") {
+            teamonly[0] =
+              element.parentElement.parentElement.parentElement.parentElement;
+            teamonly[0]
+              .querySelectorAll("tr")
+              .forEach((tr) => tr.setAttribute("table", "batting"));
+          } else if (title === "Pitchers") {
+            teamonly[1] =
+              element.parentElement.parentElement.parentElement.parentElement;
+            teamonly[1]
+              .querySelectorAll("tr")
+              .forEach((tr) => tr.setAttribute("table", "pitching"));
+          }
+          if (teamonly[0] !== "" && teamonly[1] !== "") {
+            basediv = teamonly;
+          }
+        } else if (title === "Batters") {
+          temp = "batting";
+          basediv =
+            element.parentElement.parentElement.parentElement.parentElement;
+        } else if (title === "Pitchers") {
+          temp = "pitching";
+          basediv =
+            element.parentElement.parentElement.parentElement.parentElement;
+        }
+      });
+
+      counter++;
+      setTimeout(checkCondition, 500);
+    };
+    checkCondition();
+  });
+}
 
 function setHandlers() {
   var reloaded = false;
@@ -91,49 +145,6 @@ function mainProgram(basediv) {
         insertData(basediv["element"], basediv["type"], stats);
       }
     }
-  }
-}
-
-function getBaseDiv() {
-  var temp = "";
-  var basediv = "";
-  var teamonly = ["", ""];
-  Array.from(document.getElementsByTagName("th")).forEach((element) => {
-    const title = element.getAttribute("title");
-    if (url.includes("fantasy.espn.com/baseball/team")) {
-      if (title === "Batters") {
-        teamonly[0] =
-          element.parentElement.parentElement.parentElement.parentElement;
-        teamonly[0]
-          .querySelectorAll("tr")
-          .forEach((tr) => tr.setAttribute("table", "batting"));
-      } else if (title === "Pitchers") {
-        teamonly[1] =
-          element.parentElement.parentElement.parentElement.parentElement;
-        teamonly[1]
-          .querySelectorAll("tr")
-          .forEach((tr) => tr.setAttribute("table", "pitching"));
-      }
-      if (teamonly[0] !== "" && teamonly[1] != +"") {
-        basediv = teamonly;
-      }
-    } else if (title === "Batters") {
-      temp = "batting";
-      basediv = element.parentElement.parentElement.parentElement.parentElement;
-    } else if (title === "Pitchers") {
-      temp = "pitching";
-      basediv = element.parentElement.parentElement.parentElement.parentElement;
-    }
-  });
-
-  if (basediv === "") {
-    return { result: false, element: "", type: "" };
-  } else {
-    return {
-      result: true,
-      element: basediv,
-      type: temp,
-    };
   }
 }
 
@@ -220,14 +231,6 @@ function createTable(basediv, stype, stats) {
   table.appendChild(thead);
   table.appendChild(tbody);
   basediv.appendChild(table);
-}
-
-function getCurrentUrl(message) {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(message, (response) => {
-      resolve(response);
-    });
-  });
 }
 
 function insertData(basediv, stattype, stats) {

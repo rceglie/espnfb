@@ -17,7 +17,7 @@
     "default_popup": "index.html"
   },
   "host_permissions": ["*://*/*"],
-  "permissions": ["storage", "tabs", "scripting", "activeTab"],
+  "permissions": ["storage", "tabs", "scripting", "activeTab", "webNavigation"],
   "web_accessible_resources": [
     {
       "matches": ["<all_urls>"],
