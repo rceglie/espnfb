@@ -8,58 +8,60 @@ var config = {
 };
 
 Object.keys(STATS["pitching"]).forEach((stat, index) => {
-  const label = document.createElement("label");
-
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.name = "option";
-  input.value = stat;
-  input.className = "pitching";
-  input.addEventListener("click", checkboxClick);
-
-  const div = document.createElement("div");
-  div.className = "has-tooltip";
-  div.innerHTML = "?";
-  const span = document.createElement("span");
-  span.className = "tooltip";
-  span.innerHTML = STATS["pitching"][stat].tooltip;
-  const newspan = document.createElement("span");
-  newspan.className = "tooltip-wrapper";
-  newspan.appendChild(span);
-  div.appendChild(newspan);
-
-  label.appendChild(input);
-  label.appendChild(document.createTextNode(stat));
-  label.appendChild(div);
-  document.getElementById("pitching-options").appendChild(label);
+  const div = `
+    <div class="checkbox-wrapper-21">
+      <label class="control control--checkbox">
+        ${stat}
+        <input type="checkbox" name="checkbox" value="${stat}" class="pitching" />
+        <div class="control__indicator"></div>
+        <div class="has-tooltip">
+          ?
+          <span class="tooltip-wrapper">
+            <span class="tooltip">
+              ${STATS["pitching"][stat].tooltip}
+            </span>
+          </span>
+        </div>
+      </label>
+    </div>`;
+  document.getElementById("pitching-options").innerHTML += div;
 });
 
 Object.keys(STATS["batting"]).forEach((stat, index) => {
-  const label = document.createElement("label");
-
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.name = "option";
-  input.value = stat;
-  input.className = "batting";
-  input.addEventListener("click", checkboxClick);
-
-  const div = document.createElement("div");
-  div.className = "has-tooltip";
-  div.innerHTML = "?";
-  const span = document.createElement("span");
-  span.className = "tooltip";
-  span.innerHTML = STATS["batting"][stat].tooltip;
-  const newspan = document.createElement("span");
-  newspan.className = "tooltip-wrapper";
-  newspan.appendChild(span);
-  div.appendChild(newspan);
-
-  label.appendChild(input);
-  label.appendChild(document.createTextNode(stat));
-  label.appendChild(div);
-  document.getElementById("batting-options").appendChild(label);
+  const div = `
+    <div class="checkbox-wrapper-21">
+      <label class="control control--checkbox">
+        ${stat}
+        <input type="checkbox" name="checkbox" value="${stat}" class="batting" />
+        <div class="control__indicator"></div>
+        <div class="has-tooltip">
+          ?
+          <span class="tooltip-wrapper">
+            <span class="tooltip">
+              ${STATS["batting"][stat].tooltip}
+            </span>
+          </span>
+        </div>
+      </label>
+    </div>`;
+  document.getElementById("batting-options").innerHTML += div;
 });
+
+Array.from(document.getElementsByClassName("checkbox-wrapper-21")).forEach(
+  (checkbox) =>
+    checkbox.addEventListener("mouseup", function () {
+      let box = this.childNodes[1].childNodes[1];
+      if (box.checked) {
+        config[box.className] = config[box.className].filter(
+          (item) => item !== box.value
+        );
+        updateBrowser();
+      } else {
+        config[box.className].push(box.value);
+        updateBrowser();
+      }
+    })
+);
 
 // Get config from brower localStorage
 chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -68,23 +70,17 @@ chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     { message: "requesting config" },
     function (res) {
       config = res.response;
-      console.log("config:");
-      console.log(config);
       // update color checkbox
       document.getElementById("color-code").checked = config.color;
       // update batting + pitching checkboxes
       Array.prototype.slice
         .call(document.getElementsByClassName("batting"))
         .forEach((item) => {
-          console.log(item.value);
-          console.log(config.batting.includes(item.value));
           item.checked = config.batting.includes(item.value);
         });
       Array.prototype.slice
         .call(document.getElementsByClassName("pitching"))
         .forEach((item) => {
-          console.log(item.value);
-          console.log(config.pitching.includes(item.value));
           item.checked = config.pitching.includes(item.value);
         });
     }
@@ -100,23 +96,17 @@ function updateBrowser() {
   });
 }
 
-function checkboxClick() {
-  console.log(this.className);
-  console.log(config);
-  console.log(config[this.className]);
-
-  if (!this.checked) {
-    config[this.className] = config[this.className].filter(
-      (item) => item !== this.value
-    );
-    updateBrowser();
-  } else {
-    config[this.className].push(this.value);
-    updateBrowser();
-  }
-
-  console.log(config);
-}
+// function checkboxClick() {
+//   if (!this.checked) {
+//     config[this.className] = config[this.className].filter(
+//       (item) => item !== this.value
+//     );
+//     updateBrowser();
+//   } else {
+//     config[this.className].push(this.value);
+//     updateBrowser();
+//   }
+// }
 
 document.getElementById("color-code").addEventListener("click", function () {
   config.color = this.checked;

@@ -8,9 +8,10 @@
     flex-direction: column;
     justify-content: space-between;
     gap: 5px;
+    user-select: none;
 }
 
-h3 {
+h2 {
     margin: 10px;
     text-align: center;
 }
@@ -39,16 +40,7 @@ h3 {
 }
 
 .right {
-    width: 30%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: 200px;
-    padding: 20px;
     box-sizing: border-box;
-}
-
-.left {
     width: 30%;
     display: flex;
     flex-direction: column;
@@ -56,7 +48,15 @@ h3 {
     height: 200px;
 }
 
-.middle2 {
+.batting-container {
+    width: 30%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 200px;
+}
+
+.pitching-container {
     width: 30%;
     display: flex;
     flex-direction: column;
@@ -72,22 +72,50 @@ h3 {
     /* justify-content: space-evenly; */
     margin-left: 25%;
     margin-bottom: 20px;
-    gap: 10px;
+    gap: 15px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.general {
+    height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    margin-top: 10px;
+    margin-bottom: 30px;
+    gap: 20px;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
-label {
-    display: flex;
-    align-items: center;
-    height: 100%;
+.contact {
+    position: absolute;
+    text-align: center;
+    width: 500px;
+    top: 310px;
 }
 
-input {
-    margin-right: 5px;
+/* Scrollbar */
+
+.scrollbar::-webkit-scrollbar {
+    width: 12px;
 }
 
+.scrollbar::-webkit-scrollbar-track {
+    background-color: transparent;
+    border: 1.5px solid #616161;
+    border-radius: 8px;
+}
 
+.scrollbar::-webkit-scrollbar-thumb {
+    background-color: #616161;
+    border: 2px solid #616161;
+    border-radius: 8px;
+}
+
+/* Tooltip */
 
 .has-tooltip {
 
@@ -103,6 +131,7 @@ input {
     -moz-box-shadow: inset -1px -1px 1px 0px rgba(0, 0, 0, 0.25);
     box-shadow: inset -1px -1px 1px 0px rgba(0, 0, 0, 0.25);
     margin-left: 5px;
+    margin-top: 2.5px;
 
 }
 
@@ -114,10 +143,6 @@ input {
 .has-tooltip:hover .tooltip-wrapper {
     visibility: visible;
     opacity: 1;
-    /*top: 30px;*/
-    /*left: 50%;*/
-    /*margin-left: -76px;*/
-    /* z-index: 999; defined above with value of 5 */
 }
 
 .tooltip {
@@ -128,9 +153,6 @@ input {
     top: 20px;
     left: 50%;
     transform: translate(-50%, 0%);
-    /* position: relative;
-    bottom: 2em;
-    left: 10%; */
     color: #FFFFFF;
     background: #000000;
     padding: 10px;
@@ -138,4 +160,79 @@ input {
     border-radius: 8px;
     box-shadow: 4px 3px 10px #bababa;
     font-size: 15px;
+}
+
+/* Checkbox */
+
+label {
+    display: flex;
+    flex-direction: row;
+}
+
+.checkbox-wrapper-21 .control {
+    position: relative;
+    padding-left: 25px;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.checkbox-wrapper-21 .control input {
+    position: absolute;
+    z-index: -1;
+    opacity: 0;
+}
+
+.checkbox-wrapper-21 .control__indicator {
+    position: absolute;
+    top: 2px;
+    left: 0;
+    height: 16px;
+    width: 16px;
+    border-radius: 20%;
+    background: #e6e6e6;
+    border: 1px black solid;
+}
+
+.checkbox-wrapper-21 .control:hover input~.control__indicator,
+.checkbox-wrapper-21 .control input:focus~.control__indicator {
+    background: #ccc;
+}
+
+.checkbox-wrapper-21 .control input:checked~.control__indicator {
+    background: #2aa1c0;
+}
+
+.checkbox-wrapper-21 .control:hover input:not([disabled]):checked~.control__indicator,
+.checkbox-wrapper-21 .control input:checked:focus~.control__indicator {
+    background: #0e647d;
+}
+
+.checkbox-wrapper-21 .control input:disabled~.control__indicator {
+    background: #e6e6e6;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.checkbox-wrapper-21 .control__indicator:after {
+    content: '';
+    position: absolute;
+    display: none;
+}
+
+.checkbox-wrapper-21 .control input:checked~.control__indicator:after {
+    display: block;
+}
+
+.checkbox-wrapper-21 .control--checkbox .control__indicator:after {
+    left: 5px;
+    top: 2px;
+    width: 3px;
+    height: 8px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-wrapper-21 .control--checkbox input:disabled~.control__indicator:after {
+    border-color: #7b7b7b;
 }

@@ -10,7 +10,6 @@ let url = "";
 
 // ------------- Communication with background and popup ------------- //
 
-// "host_permissions": ["*://*/*"], ["https://fantasy.espn.com/baseball/*"]
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.message === "page loaded") {
     chrome.runtime.sendMessage({ message: "get url" }, (response) => {
@@ -390,9 +389,7 @@ function getFangraphsID(name, team) {
       (obj) => obj.team.toLowerCase() === team.toLowerCase()
     );
 
-    console.log(newFoundPlayers);
-
-    if (newFoundPlayers?.length === 1) {
+    if (newFoundPlayers?.length === 1 || name === "Shohei Ohtani") {
       return newFoundPlayers[0].fid;
     } else {
       console.log(

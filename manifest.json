@@ -1,7 +1,7 @@
 {
-  "name": "ESPN Fantasy Baseball Plus",
-  "version": "0.1.0",
-  "description": "more espn fantasy baseball stats",
+  "name": "ESPN Fantasy Baseball Advanced Statistics",
+  "version": "1.0.0",
+  "description": "See advanced statistics on the ESPN Fantasy Baseball pages.",
   "manifest_version": 3,
   "author": "Robert Ceglie",
   "background": {
@@ -13,6 +13,9 @@
       "js": ["content.js", "popup.js", "stats.js"]
     }
   ],
+  "icons": {
+    "64": "baseball.png"
+  },
   "action": {
     "default_popup": "index.html"
   },

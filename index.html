@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Covid-19 Stats- UK</title>
+    <title>ESPN Fantasy Baseball Advanced Statistics</title>
     <meta charset="utf-8" />
     <script type="module" src="popup.js"></script>
     <link rel="stylesheet" href="index.css" />
@@ -13,22 +13,44 @@
         Select stats for each category. Saves automatically. Refresh page to see
         changes.
       </p>
-      <div class="bottom border">
-        <div class="left border">
-          <h3>Batting</h3>
-          <div class="options" id="batting-options"></div>
+      <div class="bottom">
+        <div class="batting-container">
+          <h2>Batting</h2>
+          <div class="options scrollbar" id="batting-options"></div>
         </div>
-        <div class="middle2 border">
-          <h3>Pitching</h3>
-          <div class="options" id="pitching-options"></div>
+        <div class="pitching-container">
+          <h2>Pitching</h2>
+          <div class="options scrollbar" id="pitching-options"></div>
         </div>
-        <div class="right border">
-          <h3>General</h3>
-          <label>
-            <input type="checkbox" id="color-code" />
-            Color code stats (green is better)
-          </label>
+        <div class="right">
+          <h2>General</h2>
+          <div class="general">
+            <div class="checkbox-wrapper-21">
+              <label class="control control--checkbox"
+                >Color code
+                <input type="checkbox" id="color-code" />
+                <div class="control__indicator"></div>
+                <div class="has-tooltip">
+                  ?
+                  <span class="tooltip-wrapper"
+                    ><span class="tooltip"
+                      >Color codes the stats. Green is better, red is worse. For
+                      the "d" stats (dAVG, dERA, etc.), green indicates that the
+                      expected stat is better than the actual stat.</span
+                    ></span
+                  >
+                </div>
+              </label>
+            </div>
+          </div>
         </div>
+      </div>
+      <div class="contact">
+        No data for a player, found a bug, or have a suggestion?
+        <a href="mailto: espnfbas.contact@gmail.com">Contact author</a> or
+        <a href="https://discord.gg/G3HcYVdFSg" target="_blank"
+          >Join the Discord</a
+        >
       </div>
     </div>
   </body>
