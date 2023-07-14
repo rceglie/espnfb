@@ -14,13 +14,12 @@
     }
   ],
   "icons": {
-    "64": "baseball.png"
+    "128": "./images/baseball-2.png"
   },
   "action": {
     "default_popup": "index.html"
   },
-  "host_permissions": ["*://*/*"],
-  "permissions": ["storage", "tabs", "scripting", "activeTab", "webNavigation"],
+  "permissions": ["activeTab"],
   "web_accessible_resources": [
     {
       "matches": ["<all_urls>"],

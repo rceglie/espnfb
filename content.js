@@ -10,12 +10,11 @@ let url = "";
 
 // ------------- Communication with background and popup ------------- //
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  console.log(request);
   if (request.message === "page loaded") {
-    chrome.runtime.sendMessage({ message: "get url" }, (response) => {
-      url = response.url;
-      pageChange();
-    });
+    url = window.location.href;
+    pageChange();
   }
   if (request.message === "requesting config") {
     sendResponse({
@@ -23,9 +22,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
   }
   if (request.message === "sending config") {
+    console.log("recieved message");
     localStorage.setItem("addon-config", JSON.stringify(request.data));
   }
   if (request.message === "get ids") {
+    console.log("tab update works idk what this is tho");
     getids();
   }
 });

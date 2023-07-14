@@ -63,6 +63,7 @@ Array.from(document.getElementsByClassName("checkbox-wrapper-21")).forEach(
     })
 );
 
+// [activeTabs]
 // Get config from brower localStorage
 chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
   chrome.tabs.sendMessage(
@@ -87,6 +88,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
   );
 });
 
+// [activeTabs]
 function updateBrowser() {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     chrome.tabs.sendMessage(tabs[0].id, {
@@ -95,18 +97,6 @@ function updateBrowser() {
     });
   });
 }
-
-// function checkboxClick() {
-//   if (!this.checked) {
-//     config[this.className] = config[this.className].filter(
-//       (item) => item !== this.value
-//     );
-//     updateBrowser();
-//   } else {
-//     config[this.className].push(this.value);
-//     updateBrowser();
-//   }
-// }
 
 document.getElementById("color-code").addEventListener("click", function () {
   config.color = this.checked;
