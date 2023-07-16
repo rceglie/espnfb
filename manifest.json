@@ -14,7 +14,7 @@
     }
   ],
   "icons": {
-    "128": "./images/baseball-2.png"
+    "128": "./images/baseball.png"
   },
   "action": {
     "default_popup": "index.html"
@@ -22,8 +22,8 @@
   "permissions": ["activeTab"],
   "web_accessible_resources": [
     {
-      "matches": ["https://fantasy.espn.com/baseball/*"],
-      "resources": ["stats.js"]
+      "resources": ["stats.js"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
