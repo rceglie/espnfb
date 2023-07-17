@@ -70,6 +70,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     tabs[0].id,
     { message: "requesting config" },
     function (res) {
+      console.log(res.response);
       config = res.response;
       // update color checkbox
       document.getElementById("color-code").checked = config.color;

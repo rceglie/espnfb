@@ -11,18 +11,24 @@ let url = "";
 // ------------- Communication with background and popup ------------- //
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  console.log(request);
+  //console.log(request);
   if (request.message === "page loaded") {
     url = window.location.href;
     pageChange();
   }
   if (request.message === "requesting config") {
-    sendResponse({
-      response: JSON.parse(localStorage.getItem("addon-config")),
-    });
+    if (localStorage.getItem("addon-config") === null) {
+      sendResponse({
+        response: { batting: [], pitching: [], misc: [], color: false },
+      });
+    } else {
+      sendResponse({
+        response: JSON.parse(localStorage.getItem("addon-config")),
+      });
+    }
   }
   if (request.message === "sending config") {
-    console.log("recieved message");
+    //console.log("recieved message");
     localStorage.setItem("addon-config", JSON.stringify(request.data));
   }
   if (request.message === "get ids") {
