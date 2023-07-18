@@ -19,7 +19,7 @@
   "action": {
     "default_popup": "index.html"
   },
-  "permissions": ["activeTab"],
+  "permissions": [],
   "web_accessible_resources": [
     {
       "resources": ["stats.js"],

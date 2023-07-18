@@ -386,7 +386,14 @@ function getFangraphsID(name, team) {
     }
   });
   if (foundPlayers.length === 1) {
-    return foundPlayers[0].fid;
+    if (foundPlayers[0].fid.slice(0, 2) === "sa") {
+      console.log(
+        "Fangraphs ID for " + name + " needs to be updated. Contact author."
+      );
+      return -1;
+    } else {
+      return foundPlayers[0].fid;
+    }
   } else if (name === undefined) {
   } else if (foundPlayers.length === 0) {
     console.log("No Fangraphs ID found for " + name + ". Contact author.");
