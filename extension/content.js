@@ -43,8 +43,13 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
 // ------------------------- Actual program -------------------------- //
 
-function initiate() {
-  console.log("page change");
+var STATSHEET;
+
+async function initiate() {
+  console.log("initiating");
+  console.log("getting stat sheet");
+  STATSHEET = await getStatSheet();
+  console.log(`got stat sheet ${STATSHEET.length}`);
   getBaseDiv().then((basediv) => {
     setHandlers();
     mainProgram(basediv);
@@ -312,13 +317,7 @@ function insertData(basediv, stattype, stats) {
       return;
     }
 
-    const statSheet = await getStatSheet();
-    const data = await getPlayerData(
-      playerName,
-      playerTeam,
-      stattype,
-      statSheet
-    );
+    const data = await getPlayerData(playerName, playerTeam);
 
     if (data !== null) {
       stats.forEach((stat) => {
@@ -349,8 +348,13 @@ function insertData(basediv, stattype, stats) {
   });
 }
 
-async function getPlayerData(name, team, stattype, statSheet) {
-  const matches = statSheet.filter((p) => p.Name === name);
+async function getPlayerData(name, team) {
+  let matches = STATSHEET.filter(
+    (p) => p.Name.toLowerCase() === name.toLowerCase()
+  );
+  if (matches.length > 1) {
+    matches = matches.filter((p) => p.Team === team);
+  }
   if (matches.length === 0) {
     console.log(`Could not find data for ${name}. Contact author`);
     return null;
