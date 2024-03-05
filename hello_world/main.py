@@ -71,27 +71,28 @@ nameCorrections = {
 
 @app.route("/")
 def hello():
-    bdf = batting_stats(2023, qual=1)
-    bdf = bdf[battingCategories]
+    # bdf = batting_stats(2023, qual=1)
+    # bdf = bdf[battingCategories]
 
-    pdf = pitching_stats(2023, qual=1)
-    pdf = pdf[pitchingCategories]
+    # pdf = pitching_stats(2023, qual=1)
+    # pdf = pdf[pitchingCategories]
 
-    df = pd.concat([bdf, pdf], ignore_index=True)
+    # df = pd.concat([bdf, pdf], ignore_index=True)
 
-    df["Team"] = df["Team"].replace(teamCorrections)
-    df["Name"] = df["Name"].replace(nameCorrections)
+    # df["Team"] = df["Team"].replace(teamCorrections)
+    # df["Name"] = df["Name"].replace(nameCorrections)
 
-    agg = {col: "sum" if col not in ["Name", "Team"] else "first" for col in df.columns}
-    df = df.groupby(["Name", "Team"]).aggregate(agg)
+    # agg = {col: "sum" if col not in ["Name", "Team"] else "first" for col in df.columns}
+    # df = df.groupby(["Name", "Team"]).aggregate(agg)
 
-    # df.to_csv("stats.csv", index=False)
+    # # df.to_csv("stats.csv", index=False)
 
-    response = make_response(df.to_csv(index=False))
-    response.headers["Content-Disposition"] = "attachment; filename=data.csv"
-    response.headers["Content-Type"] = "text/csv"
+    # response = "success"  # make_response(df.to_csv(index=False))
+    # # response.headers["Content-Disposition"] = "attachment; filename=data.csv"
+    # # response.headers["Content-Type"] = "text/csv"
 
-    return response
+    # return response
+    return "hello"
 
 
 if __name__ == "__main__":
