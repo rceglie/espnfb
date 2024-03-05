@@ -88,8 +88,8 @@ def hello():
     # df.to_csv("stats.csv", index=False)
 
     response = "success"  # make_response(df.to_csv(index=False))
-    response.headers["Content-Disposition"] = "attachment; filename=data.csv"
-    response.headers["Content-Type"] = "text/csv"
+    # response.headers["Content-Disposition"] = "attachment; filename=data.csv"
+    # response.headers["Content-Type"] = "text/csv"
 
     # return response
     return "hello"
