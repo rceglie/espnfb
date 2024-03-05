@@ -10,7 +10,7 @@
   "content_scripts": [
     {
       "matches": ["https://fantasy.espn.com/baseball/*"],
-      "js": ["content.js", "popup.js", "stats.js"]
+      "js": ["content.js", "popup.js"]
     }
   ],
   "icons": {
@@ -19,11 +19,11 @@
   "action": {
     "default_popup": "index.html"
   },
-  "permissions": [],
   "web_accessible_resources": [
     {
       "resources": ["stats.js"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "permissions": []
 }

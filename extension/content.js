@@ -1,12 +1,10 @@
 // ------------------ Import stats.js and mapping.js ----------------- //
 
-var STATS_CONFIG;
+var STATS_CONFIG = [];
 (async () => {
   const src = chrome.runtime.getURL("stats.js");
   STATS_CONFIG = (await import(src)).default;
 })();
-
-let url = "";
 
 // ------------- Communication with background and popup ------------- //
 
@@ -14,7 +12,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   //console.log(request);
   if (request.message === "page loaded") {
     url = window.location.href;
-    pageChange();
+    initiate();
   }
   if (request.message === "requesting config") {
     if (localStorage.getItem("addon-config") === null) {
@@ -31,39 +29,27 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     //console.log("recieved message");
     localStorage.setItem("addon-config", JSON.stringify(request.data));
   }
+  if (request.message === "sending STATS") {
+    console.log("recieved message");
+    if (STATS_CONFIG.length === 0) {
+      STATS_CONFIG = request.data;
+    }
+  }
   if (request.message === "get ids") {
     console.log("tab update works idk what this is tho");
     getids();
   }
 });
 
-// ------------------------ Data fetching -----------------------------//
-
-var LOOKUP_TABLE;
-getids(); // remove later
-function getids() {
-  const sheetURL =
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxN3BwvlA5XdWCyukmR0o1myMbaShQieuLI5B7bHb3WwuhXCBbXX5b_zNngBj3kcczcni4lnhX7zEq/pub?gid=0&single=true&output=csv";
-
-  fetch(sheetURL)
-    .then((response) => response.text())
-    .then((data) => {
-      // Parse the data (CSV or other format) into JavaScript objects
-      const rows = data.split("\n").slice(1); // Exclude header row
-      const objects = rows.map((row) => {
-        const [name, team, pos, fid] = row.split(",");
-        return { name, team, pos, fid };
-      });
-      LOOKUP_TABLE = objects;
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-    });
-}
-
 // ------------------------- Actual program -------------------------- //
 
-function pageChange() {
+var STATSHEET;
+
+async function initiate() {
+  console.log("initiating");
+  console.log("getting stat sheet");
+  STATSHEET = await getStatSheet();
+  console.log(`got stat sheet ${STATSHEET.length}`);
   getBaseDiv().then((basediv) => {
     setHandlers();
     mainProgram(basediv);
@@ -268,11 +254,36 @@ function createTable(basediv, stype, stats) {
   basediv.appendChild(table);
 }
 
+async function getStatSheet() {
+  const URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxN3BwvlA5XdWCyukmR0o1myMbaShQieuLI5B7bHb3WwuhXCBbXX5b_zNngBj3kcczcni4lnhX7zEq/pub?gid=0&single=true&output=csv";
+
+  const response = await fetch(URL);
+  const data = await response.text();
+
+  const lines = data.split("\n");
+  const headers = lines[0].split(",");
+  const result = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const obj = {};
+    const currentLine = lines[i].split(",");
+
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = currentLine[j];
+    }
+
+    result.push(obj);
+  }
+
+  return result;
+}
+
 function insertData(basediv, stattype, stats) {
   var premadetable = document.getElementById(`advanced-table-${stattype}`)
     .childNodes[1].childNodes;
   var counter = 0;
-  premadetable.forEach((player, index) => {
+  premadetable.forEach(async (player, index) => {
     counter += 1;
     if (player === undefined) {
       return;
@@ -300,119 +311,58 @@ function insertData(basediv, stattype, stats) {
       var playerTeam = document.querySelectorAll(`[data-idx="${index}"]`)[0]
         .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
         .childNodes[1].childNodes[0].innerHTML;
-      var playerPos = document.querySelectorAll(`[data-idx="${index}"]`)[0]
-        .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
-        .childNodes[1].childNodes[1].innerHTML;
     }
+
     if (playerName === undefined) {
       return;
     }
 
-    getPlayerData(playerName, playerTeam, playerPos, stattype, stats).then(
-      (data) => {
-        if (data === null) {
-          console.log("Error getting data for " + playerName + ".");
-        } else if (data !== "error") {
-          stats.forEach((stat) => {
-            try {
-              document.getElementById(`${stat}-idx-${index}`).innerHTML =
-                "&nbsp" +
-                data[stat].toFixed(STATS_CONFIG[stattype][stat]["round"]) +
-                "&nbsp";
-            } catch (err) {
-              console.log(err);
-            }
-          });
+    const data = await getPlayerData(playerName, playerTeam);
+
+    if (data !== null) {
+      stats.forEach((stat) => {
+        if (stat === "SIERA") {
+          document.getElementById(`${"SIERA"}-idx-${index}`).innerHTML =
+            "&nbsp" +
+            parseFloat(data["SIERA\r"]).toFixed(
+              STATS_CONFIG[stattype]["SIERA"]["round"]
+            ) +
+            "&nbsp";
+        } else {
+          document.getElementById(`${stat}-idx-${index}`).innerHTML =
+            "&nbsp" +
+            parseFloat(data[stat]).toFixed(
+              STATS_CONFIG[stattype][stat]["round"]
+            ) +
+            "&nbsp";
         }
-        if (
-          JSON.parse(localStorage.getItem("addon-config")).color &&
-          counter === premadetable.length
-        ) {
-          colorCode(stattype, stats);
-        }
-      }
-    );
+      });
+    }
+
+    if (
+      JSON.parse(localStorage.getItem("addon-config")).color &&
+      counter === premadetable.length
+    ) {
+      colorCode(stattype, stats);
+    }
   });
 }
 
-function getPlayerData(name, team, pos, stattype, stats) {
-  var fid = getFangraphsID(name, team);
-  if (fid === -1) {
-    return new Promise((resolve, reject) => {
-      resolve("error");
-    });
+async function getPlayerData(name, team) {
+  let matches = STATSHEET.filter(
+    (p) => p.Name.toLowerCase() === name.toLowerCase()
+  );
+  if (matches.length > 1) {
+    matches = matches.filter((p) => p.Team === team);
   }
-
-  return fetch(
-    `https://www.fangraphs.com/api/players/stats?playerid=${fid}&position${
-      stattype === "batting" ? "" : "=P"
-    }`
-  )
-    .then((response) => response.json())
-    .then((data) => {
-      const foundObject = data.data.find(
-        (obj) =>
-          obj["Season"].includes("season=2023") && obj["AbbLevel"] == "MLB" //&& obj["Team"] === "Average"
-      );
-      if (foundObject) {
-        var result = {};
-        stats.forEach((key) => {
-          if (key === "dERA") {
-            result[key] = foundObject["ERA"] - foundObject["xERA"];
-          } else if (key === "dFIP") {
-            result[key] = foundObject["FIP"] - foundObject["xFIP"];
-          } else if (key === "dFIP-") {
-            result[key] = foundObject["xFIP-"] - foundObject["FIP-"];
-          } else if (key === "dAVG") {
-            result[key] = foundObject["xAVG"] - foundObject["AVG"];
-          } else if (key === "dwOBA") {
-            result[key] = foundObject["xwOBA"] - foundObject["wOBA"];
-          } else {
-            result[key] = foundObject[key];
-          }
-        });
-        return result;
-      } else {
-        return null;
-      }
-    });
-}
-
-function getFangraphsID(name, team) {
-  var foundPlayers = [];
-  LOOKUP_TABLE.forEach((player) => {
-    if (player.name === name) {
-      foundPlayers.push(player);
-    }
-  });
-  if (foundPlayers.length === 1) {
-    if (foundPlayers[0].fid.slice(0, 2) === "sa") {
-      console.log(
-        "Fangraphs ID for " + name + " needs to be updated. Contact author."
-      );
-      return -1;
-    } else {
-      return foundPlayers[0].fid;
-    }
-  } else if (name === undefined) {
-  } else if (foundPlayers.length === 0) {
-    console.log("No Fangraphs ID found for " + name + ". Contact author.");
-    return -1;
+  if (matches.length === 0) {
+    console.log(`Could not find data for ${name}. Contact author`);
+    return null;
+  } else if (matches.length === 1) {
+    return matches[0];
   } else {
-    const newFoundPlayers = foundPlayers.filter(
-      (obj) => obj.team.toLowerCase() === team.toLowerCase()
-    );
-
-    if (newFoundPlayers?.length === 1 || name === "Shohei Ohtani") {
-      return newFoundPlayers[0].fid;
-    } else {
-      console.log(
-        "Multiple IDs found for " +
-          name +
-          " but could not identify which is correct. Contact author."
-      );
-    }
-    return -1;
+    console.log(`Multiple entries for ${name}.`);
+    return null;
   }
 }
 
