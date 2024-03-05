@@ -2,6 +2,7 @@
 from flask import Flask, make_response
 from pybaseball import batting_stats, pitching_stats
 import pandas as pd
+import io
 
 app = Flask(__name__)
 
@@ -71,28 +72,26 @@ nameCorrections = {
 
 @app.route("/")
 def hello():
-    bdf = batting_stats(2023, qual=1)
-    bdf = bdf[battingCategories]
-
-    pdf = pitching_stats(2023, qual=1)
-    pdf = pdf[pitchingCategories]
+    bdf = batting_stats(2023, qual=1)[battingCategories]
+    pdf = pitching_stats(2023, qual=1)[pitchingCategories]
 
     df = pd.concat([bdf, pdf], ignore_index=True)
 
-    df["Team"] = df["Team"].replace(teamCorrections)
-    df["Name"] = df["Name"].replace(nameCorrections)
+    df["Team"].replace(teamCorrections, inplace=True)
+    df["Name"].replace(nameCorrections, inplace=True)
 
     agg = {col: "sum" if col not in ["Name", "Team"] else "first" for col in df.columns}
     df = df.groupby(["Name", "Team"]).aggregate(agg)
 
-    # df.to_csv("stats.csv", index=False)
+    output = io.StringIO()
+    df.to_csv(output, index=False)
+    output.seek(0)
 
-    response = "success"  # make_response(df.to_csv(index=False))
-    # response.headers["Content-Disposition"] = "attachment; filename=data.csv"
-    # response.headers["Content-Type"] = "text/csv"
+    response = make_response(output.read())
+    response.headers["Content-Disposition"] = "attachment; filename=data.csv"
+    response.headers["Content-Type"] = "text/csv"
 
-    # return response
-    return "hello"
+    return response
 
 
 if __name__ == "__main__":
