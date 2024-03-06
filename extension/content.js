@@ -261,69 +261,90 @@ function createTable(basediv, stype, stats) {
 }
 
 function createMatchupTable(basediv) {
+  let colgroup = basediv.firstChild.childNodes[2];
+  let headers = basediv.firstChild.childNodes[3].firstChild;
+  let dateHeader = headers.childNodes[2];
+  let subheaders = basediv.firstChild.childNodes[3].childNodes[1];
+
+  // Clear existing table first
   if (document.querySelectorAll('[title="rank-span"]').length > 0) {
-    return;
-  } else {
-    var opponentTableElement = basediv.firstChild.childNodes[2];
-    var newRowElement = document.createElement("col");
-    newRowElement.className = "Table__Column";
-    opponentTableElement.appendChild(newRowElement);
-    var totalWidth = 1.5 * Math.round(opponentTableElement.offsetWidth * 0.8);
-
-    var header = document.querySelector('div[title="Opponent"]').parentElement
-      .parentElement;
-    var rankTitleElement = document.createElement("th");
-    rankTitleElement.className = "Table__TH";
-    var rankTitleDivElement = document.createElement("div");
-    rankTitleDivElement.className = "jsx-2810852873 table--cell opp header";
-    var rankTitleSpanElement = document.createElement("span");
-    rankTitleSpanElement.setAttribute("title", "rank-span");
-    rankTitleSpanElement.innerHTML = "RK";
-
-    rankTitleDivElement.appendChild(rankTitleSpanElement);
-    rankTitleElement.appendChild(rankTitleDivElement);
-    header.appendChild(rankTitleElement);
-
-    header.parentElement.firstChild.childNodes[2].setAttribute("colspan", "3");
-
-    document
-      .querySelectorAll('div[class="game-status-inline flex"]')
-      .forEach((cell) => {
-        cell.style = "text-align: center;";
-      });
-
-    document.querySelectorAll('[title="Opponent"]').forEach((cell) => {
-      cell.style = "padding: 0px; margin: 0px; text-align: center;";
-      cell.className = "jsx-2810852873 table--cell opp header";
-    });
-
-    [...header.childNodes].slice(3, 6).forEach((th, index) => {
-      console.log(th);
-      th.firstChild.className = "jsx-2810852873 table--cell header";
-      th.firstChild.style = `text-align: center; padding: 0px; border: 0px; width: ${
-        totalWidth / 3
-      }px;`;
-    });
-    header.childNodes[5].firstChild.style = `text-align: center; padding: 0px; border: 0px; width: ${
-      totalWidth / 6
-    }px;`;
-
-    var rows = basediv.firstChild.childNodes[4].childNodes;
-    rows.forEach((row, index) => {
-      row.childNodes[3].className = "Table__TD";
-      row.childNodes[3].firstChild.className = "jsx-2810852873 table--cell opp";
-      var rankCell = document.createElement("td");
-      rankCell.className = "Table__TD";
-      var rankDiv = document.createElement("div");
-      rankDiv.className = "jsx-2810852873 table--cell opp";
-      rankDiv.setAttribute("title", "rank");
-      rankCell.appendChild(rankDiv);
-      row.appendChild(rankCell);
-      let rankElement = document.createElement("span");
-      rankElement.setAttribute("rank-index", index);
-      row.childNodes[5].firstChild.appendChild(rankElement);
+    console.log(dateHeader);
+    dateHeader.setAttribute("colspan", "2");
+    console.log(colgroup);
+    colgroup.removeChild(colgroup.childNodes[2]);
+    subheaders.removeChild(document.getElementById("rank-subheader"));
+    let rows = basediv.firstChild.childNodes[4].childNodes;
+    rows.forEach((row) => {
+      console.log(row);
+      row.childNodes[5].remove(row.childNodes[5].firstChild);
     });
   }
+
+  // Extra column for table
+  let colNew = document.createElement("col");
+  colNew.className = "Table__Column";
+  colNew.id = "rank-col";
+  colgroup.appendChild(colNew);
+
+  // TH Header ("March 20")
+  console.log(dateHeader);
+  dateHeader.setAttribute("colspan", "3");
+
+  // Get total width
+  var totalWidth = 1.5 * Math.round(colgroup.offsetWidth * 0.8);
+
+  // TH Sub Header ("RK")
+  var subheader = document.createElement("th");
+  subheader.className = "Table__TH";
+  subheader.id = "rank-subheader";
+  var rankTitleDivElement = document.createElement("div");
+  rankTitleDivElement.className = "jsx-2810852873 table--cell opp header";
+  var rankTitleSpanElement = document.createElement("span");
+  rankTitleSpanElement.setAttribute("title", "rank-span");
+  rankTitleSpanElement.innerHTML = "RK";
+  rankTitleDivElement.appendChild(rankTitleSpanElement);
+  subheader.appendChild(rankTitleDivElement);
+  subheaders.appendChild(subheader);
+
+  // Inner divs of subheaders
+  [...subheaders.childNodes].slice(3, 6).forEach((th, index) => {
+    th.firstChild.className = "jsx-2810852873 table--cell header";
+    th.firstChild.style = `text-align: center; padding: 0px; border: 0px; width: ${
+      totalWidth / (index == 2 ? 3 : 3)
+    }px;`;
+    console.log(th);
+  });
+
+  // RK Cells
+  var rows = basediv.firstChild.childNodes[4].childNodes;
+  rows.forEach((row, index) => {
+    var rankCell = document.createElement("td");
+    rankCell.className = "Table__TD rank-cell";
+    var rankDiv = document.createElement("div");
+    rankDiv.className = "jsx-2810852873 table--cell opp";
+    rankDiv.setAttribute("title", "rank");
+    rankCell.appendChild(rankDiv);
+    row.appendChild(rankCell);
+    let rankElement = document.createElement("span");
+    rankElement.setAttribute("rank-index", index);
+    row.childNodes[5].firstChild.appendChild(rankElement);
+
+    row.childNodes[3].className = "Table__TD";
+    row.childNodes[3].firstChild.classList.remove("ml4");
+    row.childNodes[3].firstChild.style =
+      "padding: 0px; margin: 0px; text-align: center;";
+    row.childNodes[4].firstChild.style =
+      "padding: 0px; margin: 0px; text-align: center;";
+    row.childNodes[4].firstChild.classList.remove("tl");
+    row.childNodes[5].firstChild.style =
+      "padding: 0px; margin: 0px; text-align: center;";
+
+    var oppElement = row.childNodes[3];
+
+    var rankSubElement = document.createElement("div");
+    rankSubElement.innerHTML = "10th";
+    oppElement.firstChild.appendChild(rankSubElement);
+  });
 }
 
 function matchupRank(basediv) {
@@ -336,7 +357,6 @@ function matchupRank(basediv) {
         .childNodes[1].childNodes[1].innerHTML;
     if (position.includes("P")) {
       var oppElement = row.childNodes[3].firstChild;
-      row.childNodes[4].firstChild.firstChild.style = "text-align: center;";
       if (oppElement.innerHTML !== "--") {
         var opponentBox =
           row.childNodes[3].firstChild.firstChild.firstChild.firstChild;
@@ -344,9 +364,9 @@ function matchupRank(basediv) {
         var rank = STATSHEET.filter((p) => {
           return p.Name.toLowerCase() === opponent.toLowerCase().trim();
         })[0]["Rank"];
-        let rankElement = document.querySelectorAll(
-          `[rank-index="${index}"]`
-        )[0];
+        let rankElement = row.childNodes[5].firstChild.firstChild;
+        document.querySelectorAll(`[rank-index="${index}"]`)[0];
+        console.log(rankElement);
         let suffix = "th";
         if (rank == 1 || rank == 21) {
           suffix = "st";
