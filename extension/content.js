@@ -9,7 +9,6 @@ var STATS_CONFIG = [];
 // ------------- Communication with background and popup ------------- //
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  //console.log(request);
   if (request.message === "page loaded") {
     url = window.location.href;
     initiate();
@@ -26,19 +25,20 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     }
   }
   if (request.message === "sending config") {
-    //console.log("recieved message");
     localStorage.setItem("addon-config", JSON.stringify(request.data));
   }
   if (request.message === "sending STATS") {
-    console.log("recieved message");
     if (STATS_CONFIG.length === 0) {
       STATS_CONFIG = request.data;
     }
   }
   if (request.message === "get ids") {
-    console.log("tab update works idk what this is tho");
     getids();
   }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("DOM LOADED");
 });
 
 // ------------------------- Actual program -------------------------- //
@@ -47,15 +47,19 @@ var STATSHEET;
 
 async function initiate() {
   console.log("initiating");
-  console.log("getting stat sheet");
   STATSHEET = await getStatSheet();
-  console.log(`got stat sheet ${STATSHEET.length}`);
+
+  // let basediv = await getBaseDiv();
+  // setHandlers();
+  // mainProgram(basediv);
+
   getBaseDiv().then((basediv) => {
     setHandlers();
     mainProgram(basediv);
   });
 }
 
+// TODO: Rewrite getbasediv as async (maybe)
 function getBaseDiv() {
   return new Promise((resolve) => {
     let counter = 0;
@@ -146,21 +150,23 @@ function mainProgram(basediv) {
     // Wrong page (no stat tables)
     return;
   } else {
+    const settings = JSON.parse(localStorage.getItem("addon-config"));
+
     if (url.includes("fantasy.espn.com/baseball/team")) {
-      var stats = JSON.parse(localStorage.getItem("addon-config"))["batting"];
+      matchupRank(basediv["element"][0]);
+      var stats = settings["batting"];
       if (stats.length > 0) {
         createTable(basediv["element"][0], "batting", stats);
         insertData(basediv["element"][0], "batting", stats);
       }
-      stats = JSON.parse(localStorage.getItem("addon-config"))["pitching"];
+      stats = settings["pitching"];
       if (stats.length > 0) {
         createTable(basediv["element"][1], "pitching", stats);
         insertData(basediv["element"][1], "pitching", stats);
       }
     } else {
-      var stats = JSON.parse(localStorage.getItem("addon-config"))[
-        basediv["type"]
-      ];
+      matchupRank(basediv["element"]);
+      var stats = settings[basediv["type"]];
       if (stats.length > 0) {
         createTable(basediv["element"], basediv["type"], stats);
         insertData(basediv["element"], basediv["type"], stats);
@@ -254,6 +260,116 @@ function createTable(basediv, stype, stats) {
   basediv.appendChild(table);
 }
 
+function createMatchupTable(basediv) {
+  if (document.querySelectorAll('[title="rank-span"]').length > 0) {
+    return;
+  } else {
+    var opponentTableElement = basediv.firstChild.childNodes[2];
+    var newRowElement = document.createElement("col");
+    newRowElement.className = "Table__Column";
+    opponentTableElement.appendChild(newRowElement);
+    var totalWidth = 1.5 * Math.round(opponentTableElement.offsetWidth * 0.8);
+
+    var header = document.querySelector('div[title="Opponent"]').parentElement
+      .parentElement;
+    var rankTitleElement = document.createElement("th");
+    rankTitleElement.className = "Table__TH";
+    var rankTitleDivElement = document.createElement("div");
+    rankTitleDivElement.className = "jsx-2810852873 table--cell opp header";
+    var rankTitleSpanElement = document.createElement("span");
+    rankTitleSpanElement.setAttribute("title", "rank-span");
+    rankTitleSpanElement.innerHTML = "RK";
+
+    rankTitleDivElement.appendChild(rankTitleSpanElement);
+    rankTitleElement.appendChild(rankTitleDivElement);
+    header.appendChild(rankTitleElement);
+
+    header.parentElement.firstChild.childNodes[2].setAttribute("colspan", "3");
+
+    document
+      .querySelectorAll('div[class="game-status-inline flex"]')
+      .forEach((cell) => {
+        cell.style = "text-align: center;";
+      });
+
+    document.querySelectorAll('[title="Opponent"]').forEach((cell) => {
+      cell.style = "padding: 0px; margin: 0px; text-align: center;";
+      cell.className = "jsx-2810852873 table--cell opp header";
+    });
+
+    [...header.childNodes].slice(3, 6).forEach((th, index) => {
+      console.log(th);
+      th.firstChild.className = "jsx-2810852873 table--cell header";
+      th.firstChild.style = `text-align: center; padding: 0px; border: 0px; width: ${
+        totalWidth / 3
+      }px;`;
+    });
+    header.childNodes[5].firstChild.style = `text-align: center; padding: 0px; border: 0px; width: ${
+      totalWidth / 6
+    }px;`;
+
+    var rows = basediv.firstChild.childNodes[4].childNodes;
+    rows.forEach((row, index) => {
+      row.childNodes[3].className = "Table__TD";
+      row.childNodes[3].firstChild.className = "jsx-2810852873 table--cell opp";
+      var rankCell = document.createElement("td");
+      rankCell.className = "Table__TD";
+      var rankDiv = document.createElement("div");
+      rankDiv.className = "jsx-2810852873 table--cell opp";
+      rankDiv.setAttribute("title", "rank");
+      rankCell.appendChild(rankDiv);
+      row.appendChild(rankCell);
+      let rankElement = document.createElement("span");
+      rankElement.setAttribute("rank-index", index);
+      row.childNodes[5].firstChild.appendChild(rankElement);
+    });
+  }
+}
+
+function matchupRank(basediv) {
+  createMatchupTable(basediv);
+
+  var rows = basediv.firstChild.childNodes[4].childNodes;
+  rows.forEach((row, index) => {
+    var position =
+      row.childNodes[0].firstChild.firstChild.childNodes[1].firstChild
+        .childNodes[1].childNodes[1].innerHTML;
+    if (position.includes("P")) {
+      var oppElement = row.childNodes[3].firstChild;
+      row.childNodes[4].firstChild.firstChild.style = "text-align: center;";
+      if (oppElement.innerHTML !== "--") {
+        var opponentBox =
+          row.childNodes[3].firstChild.firstChild.firstChild.firstChild;
+        var opponent = opponentBox.innerHTML.replace(/@/, "");
+        var rank = STATSHEET.filter((p) => {
+          return p.Name.toLowerCase() === opponent.toLowerCase().trim();
+        })[0]["Rank"];
+        let rankElement = document.querySelectorAll(
+          `[rank-index="${index}"]`
+        )[0];
+        let suffix = "th";
+        if (rank == 1 || rank == 21) {
+          suffix = "st";
+        } else if (rank == 2 || rank == 22) {
+          suffix = "nd";
+        } else if (rank == 3 || rank == 23) {
+          suffix = "rd";
+        }
+        rankElement.innerHTML = `${rank}${suffix}`;
+        let color;
+        if (rank >= 20) {
+          color = "rgb(0, 148, 68)";
+        } else if (rank >= 11) {
+          color = "rgb(25, 25, 25)";
+        } else {
+          color = "rgb(204, 0, 0)";
+        }
+        rankElement.style = `color: ${color}; text-align: center;`;
+      }
+    }
+  });
+}
+
 async function getStatSheet() {
   const URL =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxN3BwvlA5XdWCyukmR0o1myMbaShQieuLI5B7bHb3WwuhXCBbXX5b_zNngBj3kcczcni4lnhX7zEq/pub?gid=0&single=true&output=csv";
@@ -298,7 +414,6 @@ function insertData(basediv, stattype, stats) {
           `[data-idx="${index}"][table=${stattype}]`
         )[0].childNodes[1].firstChild.firstChild.childNodes[1].firstChild
           .childNodes[1].firstChild.innerHTML;
-        var playerPos = "";
       } catch (error) {
         if (playerName !== undefined) {
           console.log(error);
@@ -317,25 +432,16 @@ function insertData(basediv, stattype, stats) {
       return;
     }
 
-    const data = await getPlayerData(playerName, playerTeam);
+    const data = getPlayerData(playerName, playerTeam);
 
     if (data !== null) {
       stats.forEach((stat) => {
-        if (stat === "SIERA") {
-          document.getElementById(`${"SIERA"}-idx-${index}`).innerHTML =
-            "&nbsp" +
-            parseFloat(data["SIERA\r"]).toFixed(
-              STATS_CONFIG[stattype]["SIERA"]["round"]
-            ) +
-            "&nbsp";
-        } else {
-          document.getElementById(`${stat}-idx-${index}`).innerHTML =
-            "&nbsp" +
-            parseFloat(data[stat]).toFixed(
-              STATS_CONFIG[stattype][stat]["round"]
-            ) +
-            "&nbsp";
-        }
+        document.getElementById(`${stat}-idx-${index}`).innerHTML =
+          "&nbsp" +
+          parseFloat(data[stat]).toFixed(
+            STATS_CONFIG[stattype][stat]["round"]
+          ) +
+          "&nbsp";
       });
     }
 
@@ -348,7 +454,7 @@ function insertData(basediv, stattype, stats) {
   });
 }
 
-async function getPlayerData(name, team) {
+function getPlayerData(name, team) {
   let matches = STATSHEET.filter(
     (p) => p.Name.toLowerCase() === name.toLowerCase()
   );

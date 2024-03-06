@@ -1,6 +1,6 @@
 # [START gae_flex_quickstart]
 from flask import Flask, make_response
-from pybaseball import batting_stats, pitching_stats
+from pybaseball import batting_stats, pitching_stats, team_batting
 import pandas as pd
 import io
 
@@ -72,16 +72,31 @@ nameCorrections = {
 
 @app.route("/")
 def hello():
-    bdf = batting_stats(2023, qual=1)[battingCategories]
+    bdf = batting_stats(2022, qual=1)[battingCategories]
     pdf = pitching_stats(2023, qual=1)[pitchingCategories]
+    oppdf = team_batting(2023)
+    oppdf["Points"] = oppdf.apply(
+        lambda row: row["H"] - row["SO"] + row["BB"] + row["R"] * 2 * 0.92,
+        axis=1,
+    )
+    oppdf.rename(columns={"Team": "Name"}, inplace=True)
+    oppdf["Rank"] = oppdf["Points"].rank(ascending=False)
+    oppdf["Team"] = "-"
 
-    df = pd.concat([bdf, pdf], ignore_index=True)
+    df = pd.concat([bdf, pdf, oppdf[["Name", "Rank", "Team"]]], ignore_index=True)
 
     df["Team"].replace(teamCorrections, inplace=True)
     df["Name"].replace(nameCorrections, inplace=True)
 
+    for index, row in df.iterrows():
+        team = df.at[index, "Name"]
+        if team in teamCorrections:
+            df.at[index, "Name"] = teamCorrections[team]
+
     agg = {col: "sum" if col not in ["Name", "Team"] else "first" for col in df.columns}
     df = df.groupby(["Name", "Team"]).aggregate(agg)
+
+    df["lastcol"] = "-"
 
     output = io.StringIO()
     df.to_csv(output, index=False)
