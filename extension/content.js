@@ -9,10 +9,10 @@ var STATS_CONFIG = [];
 // ------------- Communication with background and popup ------------- //
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.message === "page loaded") {
-    url = window.location.href;
-    initiate();
-  }
+  // if (request.message === "page loaded") {
+  //   url = window.location.href;
+  //   initiate();
+  // }
   if (request.message === "requesting config") {
     if (localStorage.getItem("addon-config") === null) {
       sendResponse({
@@ -37,90 +37,96 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   }
 });
 
-document.addEventListener("DOMContentLoaded", function () {
-  console.log("DOM LOADED");
+const targetNode = document.getElementById("__next-wrapper");
+
+var RUNNING = false;
+const callback = (mutationList, observer) => {
+  if (!RUNNING) {
+    for (const mutation of mutationList) {
+      if (
+        mutation.type == "attributes" &&
+        mutation.target.tagName === "IMG" &&
+        mutation.target.className.includes("jsx")
+      ) {
+        console.log("start addon");
+        RUNNING = true;
+        initiate();
+      }
+    }
+  }
+};
+
+const observer = new MutationObserver(callback);
+
+observer.observe(targetNode, {
+  attributes: true,
+  childList: true,
+  subtree: true,
 });
 
 // ------------------------- Actual program -------------------------- //
 
 var STATSHEET;
+// getStatSheet().then((res) => {
+//   STATSHEET = res;
+//   console.log(`loaded statsheet ${STATSHEET.length}`);
+// });
 
 async function initiate() {
-  console.log("initiating");
   STATSHEET = await getStatSheet();
-
-  // let basediv = await getBaseDiv();
-  // setHandlers();
-  // mainProgram(basediv);
-
-  getBaseDiv().then((basediv) => {
-    setHandlers();
-    mainProgram(basediv);
-  });
+  console.log(`loaded statsheet ${STATSHEET.length}`);
+  let response = getBaseDiv();
+  setHandlers();
+  mainProgram(response);
 }
 
-// TODO: Rewrite getbasediv as async (maybe)
 function getBaseDiv() {
-  return new Promise((resolve) => {
-    let counter = 0;
-    var temp = "";
-    var basediv = "";
-    var teamonly = ["", ""];
+  var temp = "";
+  var basediv = "";
+  var teamonly = ["", ""];
+  var response = { found: false, element: {}, type: "" };
+  var mapping = { Batters: "batting", Pitchers: "pitching" };
 
-    const checkCondition = () => {
-      if (counter >= 10 || basediv !== "") {
-        if (basediv !== "") {
-          resolve({ result: true, element: basediv, type: temp });
-        } else {
-          resolve({ result: false, element: "", type: "" });
-        }
-        return;
+  if (!window.location.href.includes("fantasy.espn.com/baseball/team")) {
+    response.found = true;
+    response.element = document.querySelectorAll('[class="flex"]')[0];
+    response.type =
+      mapping[
+        response.element.firstChild.childNodes[3].firstChild.firstChild.title
+      ];
+    return response;
+  }
+
+  Array.from(document.getElementsByTagName("th")).forEach((element) => {
+    const title = element.getAttribute("title");
+    if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
+      if (title === "Batters") {
+        teamonly[0] =
+          element.parentElement.parentElement.parentElement.parentElement;
+        teamonly[0]
+          .querySelectorAll("tr")
+          .forEach((tr) => tr.setAttribute("table", "batting"));
+      } else if (title === "Pitchers") {
+        teamonly[1] =
+          element.parentElement.parentElement.parentElement.parentElement;
+        teamonly[1]
+          .querySelectorAll("tr")
+          .forEach((tr) => tr.setAttribute("table", "pitching"));
       }
-
-      Array.from(document.getElementsByTagName("th")).forEach((element) => {
-        const title = element.getAttribute("title");
-        if (url.includes("fantasy.espn.com/baseball/team")) {
-          if (title === "Batters") {
-            teamonly[0] =
-              element.parentElement.parentElement.parentElement.parentElement;
-            teamonly[0]
-              .querySelectorAll("tr")
-              .forEach((tr) => tr.setAttribute("table", "batting"));
-          } else if (title === "Pitchers") {
-            teamonly[1] =
-              element.parentElement.parentElement.parentElement.parentElement;
-            teamonly[1]
-              .querySelectorAll("tr")
-              .forEach((tr) => tr.setAttribute("table", "pitching"));
-          }
-          if (teamonly[0] !== "" && teamonly[1] !== "") {
-            basediv = teamonly;
-          }
-        } else if (title === "Batters") {
-          temp = "batting";
-          basediv =
-            element.parentElement.parentElement.parentElement.parentElement;
-        } else if (title === "Pitchers") {
-          temp = "pitching";
-          basediv =
-            element.parentElement.parentElement.parentElement.parentElement;
-        }
-      });
-
-      var navbar = document.querySelectorAll(`[role="tablist"]`)[0];
-      if (navbar !== undefined) {
-        navbar.childNodes.forEach((item) => {
-          if (item.className.includes("active") && item.title !== "Stats") {
-            basediv = "";
-          }
-        });
+      if (teamonly[0] !== "" && teamonly[1] !== "") {
+        basediv = teamonly;
       }
-
-      counter++;
-      setTimeout(checkCondition, 500);
-    };
-    checkCondition();
+    }
   });
+
+  var navbar = document.querySelectorAll(`[role="tablist"]`)[0];
+  if (navbar !== undefined) {
+    navbar.childNodes.forEach((item) => {
+      if (item.className.includes("active") && item.title !== "Stats") {
+        basediv = "";
+      }
+    });
+  }
 }
 
 function setHandlers() {
@@ -129,12 +135,13 @@ function setHandlers() {
     if (!reloaded) {
       reloaded = true;
       setTimeout(function () {
-        getBaseDiv().then((basediv) => mainProgram(basediv));
+        var response = getBaseDiv();
+        mainProgram(response);
       }, 3000);
     } else {
       setTimeout(function () {
         reloaded = false;
-      }, 2000);
+      }, 3000);
     }
   });
   const divElement =
@@ -146,14 +153,15 @@ function setHandlers() {
 }
 
 function mainProgram(basediv) {
-  if (!basediv["result"]) {
+  console.log(basediv);
+  if (!basediv["found"]) {
     // Wrong page (no stat tables)
     return;
   } else {
     const settings = JSON.parse(localStorage.getItem("addon-config"));
 
-    if (url.includes("fantasy.espn.com/baseball/team")) {
-      matchupRank(basediv["element"][0]);
+    if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
+      // matchupRank(basediv["element"][0]);
       var stats = settings["batting"];
       if (stats.length > 0) {
         createTable(basediv["element"][0], "batting", stats);
@@ -176,7 +184,7 @@ function mainProgram(basediv) {
 }
 
 function createTable(basediv, stype, stats) {
-  if (url.includes("fantasy.espn.com/baseball/team")) {
+  if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
     var masterList = basediv.firstChild.childNodes[3];
     var oldTable = document.getElementById(`advanced-table-${stype}`);
     oldTable?.remove();
@@ -260,131 +268,71 @@ function createTable(basediv, stype, stats) {
   basediv.appendChild(table);
 }
 
-function createMatchupTable(basediv) {
-  let colgroup = basediv.firstChild.childNodes[2];
-  let headers = basediv.firstChild.childNodes[3].firstChild;
-  let dateHeader = headers.childNodes[2];
-  let subheaders = basediv.firstChild.childNodes[3].childNodes[1];
-
-  // Clear existing table first
-  if (document.querySelectorAll('[title="rank-span"]').length > 0) {
-    console.log(dateHeader);
-    dateHeader.setAttribute("colspan", "2");
-    console.log(colgroup);
-    colgroup.removeChild(colgroup.childNodes[2]);
-    subheaders.removeChild(document.getElementById("rank-subheader"));
-    let rows = basediv.firstChild.childNodes[4].childNodes;
-    rows.forEach((row) => {
-      console.log(row);
-      row.childNodes[5].remove(row.childNodes[5].firstChild);
-    });
-  }
-
-  // Extra column for table
-  let colNew = document.createElement("col");
-  colNew.className = "Table__Column";
-  colNew.id = "rank-col";
-  colgroup.appendChild(colNew);
-
-  // TH Header ("March 20")
-  console.log(dateHeader);
-  dateHeader.setAttribute("colspan", "3");
-
-  // Get total width
-  var totalWidth = 1.5 * Math.round(colgroup.offsetWidth * 0.8);
-
-  // TH Sub Header ("RK")
-  var subheader = document.createElement("th");
-  subheader.className = "Table__TH";
-  subheader.id = "rank-subheader";
-  var rankTitleDivElement = document.createElement("div");
-  rankTitleDivElement.className = "jsx-2810852873 table--cell opp header";
-  var rankTitleSpanElement = document.createElement("span");
-  rankTitleSpanElement.setAttribute("title", "rank-span");
-  rankTitleSpanElement.innerHTML = "RK";
-  rankTitleDivElement.appendChild(rankTitleSpanElement);
-  subheader.appendChild(rankTitleDivElement);
-  subheaders.appendChild(subheader);
-
-  // Inner divs of subheaders
-  [...subheaders.childNodes].slice(3, 6).forEach((th, index) => {
-    th.firstChild.className = "jsx-2810852873 table--cell header";
-    th.firstChild.style = `text-align: center; padding: 0px; border: 0px; width: ${
-      totalWidth / (index == 2 ? 3 : 3)
-    }px;`;
-    console.log(th);
-  });
-
-  // RK Cells
-  var rows = basediv.firstChild.childNodes[4].childNodes;
-  rows.forEach((row, index) => {
-    var rankCell = document.createElement("td");
-    rankCell.className = "Table__TD rank-cell";
-    var rankDiv = document.createElement("div");
-    rankDiv.className = "jsx-2810852873 table--cell opp";
-    rankDiv.setAttribute("title", "rank");
-    rankCell.appendChild(rankDiv);
-    row.appendChild(rankCell);
-    let rankElement = document.createElement("span");
-    rankElement.setAttribute("rank-index", index);
-    row.childNodes[5].firstChild.appendChild(rankElement);
-
-    row.childNodes[3].className = "Table__TD";
-    row.childNodes[3].firstChild.classList.remove("ml4");
-    row.childNodes[3].firstChild.style =
-      "padding: 0px; margin: 0px; text-align: center;";
-    row.childNodes[4].firstChild.style =
-      "padding: 0px; margin: 0px; text-align: center;";
-    row.childNodes[4].firstChild.classList.remove("tl");
-    row.childNodes[5].firstChild.style =
-      "padding: 0px; margin: 0px; text-align: center;";
-
-    var oppElement = row.childNodes[3];
-
-    var rankSubElement = document.createElement("div");
-    rankSubElement.innerHTML = "10th";
-    oppElement.firstChild.appendChild(rankSubElement);
-  });
-}
-
 function matchupRank(basediv) {
-  createMatchupTable(basediv);
-
   var rows = basediv.firstChild.childNodes[4].childNodes;
+
+  let headerSpan =
+    basediv.firstChild.childNodes[3].childNodes[1].childNodes[3].firstChild
+      .firstChild;
+
+  headerSpan.style = "text-align: center; padding-left: 5px;";
+  headerSpan.parentElement.style = "margin: 0px!important;";
+
   rows.forEach((row, index) => {
-    var position =
-      row.childNodes[0].firstChild.firstChild.childNodes[1].firstChild
-        .childNodes[1].childNodes[1].innerHTML;
-    if (position.includes("P")) {
-      var oppElement = row.childNodes[3].firstChild;
-      if (oppElement.innerHTML !== "--") {
-        var opponentBox =
-          row.childNodes[3].firstChild.firstChild.firstChild.firstChild;
-        var opponent = opponentBox.innerHTML.replace(/@/, "");
-        var rank = STATSHEET.filter((p) => {
-          return p.Name.toLowerCase() === opponent.toLowerCase().trim();
-        })[0]["Rank"];
-        let rankElement = row.childNodes[5].firstChild.firstChild;
-        document.querySelectorAll(`[rank-index="${index}"]`)[0];
-        console.log(rankElement);
-        let suffix = "th";
-        if (rank == 1 || rank == 21) {
-          suffix = "st";
-        } else if (rank == 2 || rank == 22) {
-          suffix = "nd";
-        } else if (rank == 3 || rank == 23) {
-          suffix = "rd";
+    var rankSpan;
+    row.childNodes[3].firstChild.style =
+      "margin: 0px!important; text-align: center; width: 100%; padding-right: 0px;";
+    if (row.childNodes[3].firstChild.innerHTML.substring(0, 2) !== "--") {
+      if (
+        row.childNodes[3].firstChild.firstChild.firstChild.childNodes.length ==
+        1
+      ) {
+        rankSpan = document.createElement("span");
+        rankSpan.innerHTML = "99";
+        row.childNodes[3].firstChild.firstChild.firstChild.appendChild(
+          rankSpan
+        );
+      } else {
+        rankSpan =
+          row.childNodes[3].firstChild.firstChild.firstChild.childNodes[1];
+      }
+
+      var oppBox = row.childNodes[3];
+      if (oppBox.firstChild.childNodes[0].data != "--") {
+        var oppSpan = oppBox.firstChild.firstChild.firstChild.firstChild;
+        var ogOpp = oppSpan.innerHTML.trim();
+        var opponent = ogOpp.replace(/@/, "");
+        if (opponent.indexOf("--") == -1) {
+          var position =
+            row.childNodes[0].firstChild.firstChild.childNodes[1].firstChild
+              .childNodes[1].childNodes[1].innerHTML;
+          var rank = STATSHEET.filter((p) => {
+            return p.Name.toLowerCase() === opponent.toLowerCase().trim();
+          })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
+
+          let suffix = "th";
+          let color;
+
+          if (rank == 1 || rank == 21) {
+            suffix = "st";
+          } else if (rank == 2 || rank == 22) {
+            suffix = "nd";
+          } else if (rank == 3 || rank == 23) {
+            suffix = "rd";
+          }
+
+          if (rank >= 20) {
+            color = "rgb(0, 148, 68)";
+          } else if (rank >= 11) {
+            color = "rgb(25, 25, 25)";
+          } else {
+            color = "rgb(204, 0, 0)";
+          }
+
+          rankSpan.innerHTML = `(${rank}${suffix})`;
+          rankSpan.style = `color: ${color}; text-align: center; padding-left: 5px`;
+          oppSpan.style = `color: ${color};`;
         }
-        rankElement.innerHTML = `${rank}${suffix}`;
-        let color;
-        if (rank >= 20) {
-          color = "rgb(0, 148, 68)";
-        } else if (rank >= 11) {
-          color = "rgb(25, 25, 25)";
-        } else {
-          color = "rgb(204, 0, 0)";
-        }
-        rankElement.style = `color: ${color}; text-align: center;`;
       }
     }
   });
@@ -424,7 +372,7 @@ function insertData(basediv, stattype, stats) {
     if (player === undefined) {
       return;
     }
-    if (url.includes("fantasy.espn.com/baseball/team")) {
+    if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
       try {
         var playerName = document.querySelectorAll(
           `[data-idx="${index}"][table=${stattype}]`

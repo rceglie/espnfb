@@ -1,6 +1,6 @@
 # [START gae_flex_quickstart]
 from flask import Flask, make_response
-from pybaseball import batting_stats, pitching_stats, team_batting
+from pybaseball import batting_stats, pitching_stats, team_batting, team_pitching
 import pandas as pd
 import io
 
@@ -62,6 +62,7 @@ teamCorrections = {
     "TEX": "Tex",
     "TOR": "Tor",
     "WSH": "Wsh",
+    "WSN": "Wsh",
 }
 nameCorrections = {
     "Luis Robert": "Luis Robert Jr.",
@@ -80,10 +81,23 @@ def hello():
         axis=1,
     )
     oppdf.rename(columns={"Team": "Name"}, inplace=True)
-    oppdf["Rank"] = oppdf["Points"].rank(ascending=False)
+    oppdf["PRank"] = oppdf["Points"].rank(ascending=False)
     oppdf["Team"] = "-"
 
-    df = pd.concat([bdf, pdf, oppdf[["Name", "Rank", "Team"]]], ignore_index=True)
+    boppdf = team_pitching(2023)
+    print(boppdf.columns.tolist())
+    boppdf["Points"] = boppdf.apply(
+        lambda row: row["H"] - row["SO"] + row["BB"] + row["R"] * 2 * 0.92,
+        axis=1,
+    )
+    boppdf.rename(columns={"Team": "Name"}, inplace=True)
+    boppdf["BRank"] = boppdf["Points"].rank(ascending=True)
+    boppdf["Team"] = "-"
+
+    df = pd.concat(
+        [bdf, pdf, oppdf[["Name", "PRank", "Team"]], boppdf[["Name", "BRank", "Team"]]],
+        ignore_index=True,
+    )
 
     df["Team"].replace(teamCorrections, inplace=True)
     df["Name"].replace(nameCorrections, inplace=True)
