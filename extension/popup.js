@@ -143,18 +143,10 @@ const STATS = {
   },
 };
 
-// chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-//   chrome.tabs.sendMessage(tabs[0].id, {
-//     message: "sending STATS",
-//     data: STATS,
-//   });
-// });
-
 var config = {
   batting: [],
   pitching: [],
-  misc: [],
-  color: false,
+  other: [],
 };
 
 Object.keys(STATS["pitching"]).forEach((stat, index) => {
@@ -198,7 +190,7 @@ Object.keys(STATS["batting"]).forEach((stat, index) => {
 });
 
 Array.from(document.getElementsByClassName("checkbox-wrapper-21")).forEach(
-  (checkbox) =>
+  (checkbox) => {
     checkbox.addEventListener("mouseup", function () {
       let box = this.childNodes[1].childNodes[1];
       if (box.checked) {
@@ -210,7 +202,8 @@ Array.from(document.getElementsByClassName("checkbox-wrapper-21")).forEach(
         config[box.className].push(box.value);
         updateBrowser();
       }
-    })
+    });
+  }
 );
 
 // [activeTabs]
@@ -220,11 +213,18 @@ chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     tabs[0].id,
     { message: "requesting config" },
     function (res) {
-      // console.log(res.response);
-      config = res.response;
-      // update color checkbox
+      console.log("got config");
+      console.log(res);
+      res = res.response;
+      if (
+        (config, res) =>
+          config.length === res.length &&
+          config.every((element, index) => element === res[index])
+      ) {
+        config = res;
+      }
+      console.log(config);
       document.getElementById("color-code").checked = config.color;
-      // update batting + pitching checkboxes
       Array.prototype.slice
         .call(document.getElementsByClassName("batting"))
         .forEach((item) => {
@@ -234,6 +234,11 @@ chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         .call(document.getElementsByClassName("pitching"))
         .forEach((item) => {
           item.checked = config.pitching.includes(item.value);
+        });
+      Array.prototype.slice
+        .call(document.getElementsByClassName("other"))
+        .forEach((item) => {
+          item.checked = config.other.includes(item.value);
         });
     }
   );
@@ -249,7 +254,12 @@ function updateBrowser() {
   });
 }
 
-document.getElementById("color-code").addEventListener("click", function () {
-  config.color = this.checked;
-  updateBrowser();
-});
+// document.getElementById("color-code").addEventListener("click", function () {
+//   config.color = this.checked;
+//   updateBrowser();
+// });
+
+// document.getElementById("color-code").addEventListener("click", function () {
+//   config.color = this.checked;
+//   updateBrowser();
+// });

@@ -73,7 +73,7 @@ nameCorrections = {
 
 @app.route("/")
 def hello():
-    bdf = batting_stats(2022, qual=1)[battingCategories]
+    bdf = batting_stats(2023, qual=1)[battingCategories]
     pdf = pitching_stats(2023, qual=1)[pitchingCategories]
     oppdf = team_batting(2023)
     oppdf["Points"] = oppdf.apply(

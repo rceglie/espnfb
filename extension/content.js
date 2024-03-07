@@ -85,15 +85,19 @@ function getBaseDiv() {
   var basediv = "";
   var teamonly = ["", ""];
   var response = { found: false, element: {}, type: "" };
-  var mapping = { Batters: "batting", Pitchers: "pitching" };
 
   if (!window.location.href.includes("fantasy.espn.com/baseball/team")) {
-    response.found = true;
+    var battersTitle = document.querySelectorAll('[title="Batters"]')[0];
+    var pitchersTitle = document.querySelectorAll('[title="Pitchers"]')[0];
+
+    response.found = battersTitle !== undefined || pitchersTitle !== undefined;
+    if (!response.found) {
+      return response;
+    }
+
     response.element = document.querySelectorAll('[class="flex"]')[0];
-    response.type =
-      mapping[
-        response.element.firstChild.childNodes[3].firstChild.firstChild.title
-      ];
+    response.type = battersTitle !== undefined ? "batting" : "pitching";
+
     return response;
   }
 
@@ -153,7 +157,6 @@ function setHandlers() {
 }
 
 function mainProgram(basediv) {
-  console.log(basediv);
   if (!basediv["found"]) {
     // Wrong page (no stat tables)
     return;
@@ -161,7 +164,9 @@ function mainProgram(basediv) {
     const settings = JSON.parse(localStorage.getItem("addon-config"));
 
     if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
-      // matchupRank(basediv["element"][0]);
+      if (settings["other"].contains("or")) {
+        matchupRank(basediv["element"][0]);
+      }
       var stats = settings["batting"];
       if (stats.length > 0) {
         createTable(basediv["element"][0], "batting", stats);
@@ -173,7 +178,9 @@ function mainProgram(basediv) {
         insertData(basediv["element"][1], "pitching", stats);
       }
     } else {
-      matchupRank(basediv["element"]);
+      if (settings["other"].includes("or")) {
+        matchupRank(basediv["element"]);
+      }
       var stats = settings[basediv["type"]];
       if (stats.length > 0) {
         createTable(basediv["element"], basediv["type"], stats);
@@ -184,12 +191,19 @@ function mainProgram(basediv) {
 }
 
 function createTable(basediv, stype, stats) {
+  var scroller = basediv.firstChild.className.includes("Scroller");
+
   if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
     var masterList = basediv.firstChild.childNodes[3];
     var oldTable = document.getElementById(`advanced-table-${stype}`);
     oldTable?.remove();
   } else {
-    var masterList = basediv.firstChild.childNodes[4];
+    var masterList;
+    if (scroller) {
+      masterList = basediv.firstChild.childNodes[1].firstChild.childNodes[5];
+    } else {
+      masterList = basediv.firstChild.childNodes[4];
+    }
     var oldTable = document.getElementById(`advanced-table-batting`);
     oldTable?.remove();
     oldTable = document.getElementById(`advanced-table-pitching`);
@@ -269,73 +283,236 @@ function createTable(basediv, stype, stats) {
 }
 
 function matchupRank(basediv) {
-  var rows = basediv.firstChild.childNodes[4].childNodes;
+  var allPlayers = document.querySelectorAll(
+    '[class="AnchorLink link clr-link pointer"]'
+  );
+  var allOppDivs = document.querySelectorAll(
+    '[class="jsx-2810852873 table--cell opp ml4"]'
+  );
 
-  let headerSpan =
-    basediv.firstChild.childNodes[3].childNodes[1].childNodes[3].firstChild
-      .firstChild;
+  var numRows = allPlayers.length;
+  var numColumns = allOppDivs.length / allPlayers.length;
 
-  headerSpan.style = "text-align: center; padding-left: 5px;";
-  headerSpan.parentElement.style = "margin: 0px!important;";
+  allOppDivs.forEach((opp, index) => {
+    var rowIndex;
 
-  rows.forEach((row, index) => {
-    var rankSpan;
-    row.childNodes[3].firstChild.style =
-      "margin: 0px!important; text-align: center; width: 100%; padding-right: 0px;";
-    if (row.childNodes[3].firstChild.innerHTML.substring(0, 2) !== "--") {
-      if (
-        row.childNodes[3].firstChild.firstChild.firstChild.childNodes.length ==
-        1
-      ) {
-        rankSpan = document.createElement("span");
-        rankSpan.innerHTML = "99";
-        row.childNodes[3].firstChild.firstChild.firstChild.appendChild(
-          rankSpan
-        );
+    if (opp.parentElement.parentElement.childNodes.length > 5) {
+      rowIndex = Math.floor(index / numColumns);
+    } else {
+      if (index < numRows) {
+        rowIndex = index;
       } else {
-        rankSpan =
-          row.childNodes[3].firstChild.firstChild.firstChild.childNodes[1];
-      }
-
-      var oppBox = row.childNodes[3];
-      if (oppBox.firstChild.childNodes[0].data != "--") {
-        var oppSpan = oppBox.firstChild.firstChild.firstChild.firstChild;
-        var ogOpp = oppSpan.innerHTML.trim();
-        var opponent = ogOpp.replace(/@/, "");
-        if (opponent.indexOf("--") == -1) {
-          var position =
-            row.childNodes[0].firstChild.firstChild.childNodes[1].firstChild
-              .childNodes[1].childNodes[1].innerHTML;
-          var rank = STATSHEET.filter((p) => {
-            return p.Name.toLowerCase() === opponent.toLowerCase().trim();
-          })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
-
-          let suffix = "th";
-          let color;
-
-          if (rank == 1 || rank == 21) {
-            suffix = "st";
-          } else if (rank == 2 || rank == 22) {
-            suffix = "nd";
-          } else if (rank == 3 || rank == 23) {
-            suffix = "rd";
-          }
-
-          if (rank >= 20) {
-            color = "rgb(0, 148, 68)";
-          } else if (rank >= 11) {
-            color = "rgb(25, 25, 25)";
-          } else {
-            color = "rgb(204, 0, 0)";
-          }
-
-          rankSpan.innerHTML = `(${rank}${suffix})`;
-          rankSpan.style = `color: ${color}; text-align: center; padding-left: 5px`;
-          oppSpan.style = `color: ${color};`;
-        }
+        rowIndex = Math.floor((index - numRows) / (numColumns - 1));
       }
     }
+
+    var player = allPlayers[rowIndex];
+    var position =
+      player.parentElement.parentElement.parentElement.childNodes[1]
+        .childNodes[1].innerHTML;
+
+    if (!opp.innerHTML.includes("--")) {
+      var rankSpan;
+      if (opp.firstChild.childNodes.length == 1) {
+        rankSpan = document.createElement("span");
+        opp.firstChild.appendChild(rankSpan);
+      } else {
+        rankSpan = opp.firstChild.childNodes[1];
+      }
+      var opponent;
+      if (index < numRows) {
+        opponent = opp.firstChild.firstChild.firstChild.innerHTML
+          .replace(/@/, "")
+          .toLowerCase()
+          .trim();
+      } else {
+        opponent = opp.firstChild.textContent
+          .replace(/@/, "")
+          .toLowerCase()
+          .trim();
+      }
+      console.log(opponent);
+      var rank = STATSHEET.filter((p) => {
+        return p.Name.toLowerCase() === opponent;
+      })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
+      let suffix =
+        rank == 1 || rank == 21
+          ? "st"
+          : rank == 2 || rank == 22
+          ? "nd"
+          : rank == 3 || rank == 23
+          ? "rd"
+          : "th";
+      let color =
+        rank >= 20
+          ? "rgb(0, 148, 68)"
+          : rank >= 11
+          ? "rgb(25, 25, 25)"
+          : "rgb(204, 0, 0)";
+
+      rankSpan.innerHTML = `(${index}${rank}${suffix}${position})`;
+      opp.style = `color: ${color};`;
+    }
   });
+
+  // allPlayers.forEach((opp) => {
+  //   opp.innerHTML = "player";
+  // });
+
+  // console.log(allOppDivs);
+  // console.log(allPlayers);
+
+  // var rows;
+  // let headerSpan;
+  // var scroller;
+  // if (
+  //   basediv.firstChild.className.includes("Scroller") ||
+  //   basediv.childNodes[1].className.includes("Scroller")
+  // ) {
+  //   scroller = true;
+  //   console.log("in scroller");
+  //   var rows =
+  //     basediv.firstChild.childNodes[1].firstChild.childNodes[5].childNodes;
+  //   headerSpan =
+  //     basediv.firstChild.childNodes[1].firstChild.childNodes[4].childNodes[1]
+  //       .childNodes[3].firstChild.firstChild;
+  // } else {
+  //   scroller = false;
+  //   rows = basediv.firstChild.childNodes[4].childNodes;
+  //   headerSpan =
+  //     basediv.firstChild.childNodes[3].childNodes[1].childNodes[3].firstChild
+  //       .firstChild;
+  // }
+
+  // headerSpan.style = "text-align: center; padding-left: 5px;";
+  // headerSpan.parentElement.style = "margin: 0px!important;";
+
+  // rows.forEach((row, index) => {
+  //   var rankSpan;
+  //   row.childNodes[3].firstChild.style =
+  //     "margin: 0px!important; text-align: center; width: 100%; padding-right: 0px;";
+  //   if (row.childNodes[3].firstChild.innerHTML.substring(0, 2) !== "--") {
+  //     if (
+  //       row.childNodes[3].firstChild.firstChild.firstChild.childNodes.length ==
+  //       1
+  //     ) {
+  //       rankSpan = document.createElement("span");
+  //       rankSpan.innerHTML = "99";
+  //       row.childNodes[3].firstChild.firstChild.firstChild.appendChild(
+  //         rankSpan
+  //       );
+  //     } else {
+  //       rankSpan =
+  //         row.childNodes[3].firstChild.firstChild.firstChild.childNodes[1];
+  //     }
+
+  //     var oppBox = row.childNodes[3];
+  //     if (oppBox.firstChild.childNodes[0].data != "--") {
+  //       var oppSpan = oppBox.firstChild.firstChild.firstChild.firstChild;
+  //       var ogOpp = oppSpan.innerHTML.trim();
+  //       var opponent = ogOpp.replace(/@/, "");
+  //       if (opponent.indexOf("--") == -1) {
+  //         var position =
+  //           row.childNodes[0].firstChild.firstChild.childNodes[1].firstChild
+  //             .childNodes[1].childNodes[1].innerHTML;
+  //         var rank = STATSHEET.filter((p) => {
+  //           return p.Name.toLowerCase() === opponent.toLowerCase().trim();
+  //         })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
+
+  //         let suffix =
+  //           rank == 1 || rank == 21
+  //             ? "st"
+  //             : rank == 2 || rank == 22
+  //             ? "nd"
+  //             : rank == 3 || rank == 23
+  //             ? "rd"
+  //             : "th";
+
+  //         let color =
+  //           rank >= 20
+  //             ? "rgb(0, 148, 68)"
+  //             : rank >= 11
+  //             ? "rgb(25, 25, 25)"
+  //             : "rgb(204, 0, 0)";
+
+  //         rankSpan.innerHTML = `(${rank}${suffix})`;
+  //         rankSpan.style = `color: ${color}; text-align: center; padding-left: 5px`;
+  //         oppSpan.style = `color: ${color};`;
+  //       }
+  //     }
+  //   }
+
+  //   // Schedule
+  //   if (
+  //     document.querySelectorAll('[title="Upcoming Schedule"]').length !== null
+  //   ) {
+  //     var subheaders = document.querySelectorAll(
+  //       '[title="Upcoming Schedule"]'
+  //     )[0].parentElement.parentElement.childNodes[1].childNodes;
+  //     subheaders.forEach((subheader) => {
+  //       subheader.firstChild.firstChild.style = "text-align: center;";
+  //     });
+
+  //     var row2;
+  //     // var row2 = Array.from(document.querySelectorAll(`[data-idx="${index}"]`))
+  //     //   .sli.parentElement;
+
+  //     if (scroller) {
+  //       row2 = document.querySelectorAll(`[data-idx="${index}"]`)[0]
+  //         .parentElement;
+  //     } else {
+  //       console.log(basediv);
+  //       //row2 = Array.from(document.querySelectorAll(`[data-idx="${index}"]`))
+  //     }
+
+  //     Array.from(row2.childNodes).forEach((cell, index2) => {
+  //       console.log(cell);
+  //       cell.firstChild.style = "text-align: center";
+  //       var firstDiv = cell.firstChild.innerHTML;
+  //       if (firstDiv.indexOf("--") == -1) {
+  //         var opponent = cell.firstChild.firstChild.innerHTML
+  //           .replace(/@/, "")
+  //           .trim();
+  //         console.log(opponent);
+  //         var position =
+  //           row.childNodes[0].firstChild.firstChild.childNodes[1].firstChild
+  //             .childNodes[1].childNodes[1].innerHTML;
+  //         var rank = STATSHEET.filter((p) => {
+  //           return p.Name.toLowerCase() === opponent.toLowerCase().trim();
+  //         })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
+
+  //         let suffix =
+  //           rank == 1 || rank == 21
+  //             ? "st"
+  //             : rank == 2 || rank == 22
+  //             ? "nd"
+  //             : rank == 3 || rank == 23
+  //             ? "rd"
+  //             : "th";
+
+  //         let color =
+  //           rank >= 20
+  //             ? "rgb(0, 148, 68)"
+  //             : rank >= 11
+  //             ? "rgb(25, 25, 25)"
+  //             : "rgb(204, 0, 0)";
+
+  //         var rankSpan = document.getElementById(
+  //           `rank-span-${index}-${index2}`
+  //         );
+  //         if (rankSpan) {
+  //         } else {
+  //           rankSpan = document.createElement("span");
+  //           rankSpan.id = `rank-span-${index}-${index2}`;
+  //           cell.firstChild.firstChild.appendChild(rankSpan);
+  //         }
+  //         rankSpan.innerHTML = `(${rank}${suffix})`;
+  //         rankSpan.style = `padding-left: 5px`;
+  //         cell.firstChild.style = `color: ${color}!important; text-align: center;`;
+  //       }
+  //     });
+  //   }
+  // });
 }
 
 async function getStatSheet() {
