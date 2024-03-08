@@ -1,5 +1,3 @@
-# [START gae_flex_quickstart]
-from flask import Flask, make_response
 from pybaseball import (
     batting_stats,
     pitching_stats,
@@ -13,8 +11,6 @@ from pybaseball import (
 import pandas as pd
 import io
 
-app = Flask(__name__)
-
 battingCategories = [
     "Name",
     "Team",
@@ -27,6 +23,7 @@ battingCategories = [
     "xBA",
     "wOBA",
     "xwOBA",
+    "IDfg",
 ]
 pitchingCategories = [
     "Name",
@@ -80,7 +77,6 @@ nameCorrections = {
 }
 
 
-@app.route("/")
 def hello():
     battingStats = batting_stats(2023, qual=1)[battingCategories]
     battingStats.rename(columns={"IDfg": "key_fangraphs"}, inplace=True)
@@ -94,7 +90,7 @@ def hello():
     battingStats["Away"] = ""
 
     # get batting splits
-    for index, row in battingStats.head(3).iterrows():
+    for index, row in battingStats.iterrows():
         df = get_splits(row["key_bbref"], year=2023)
         splits = df.loc[df.index.get_level_values(1).isin(["Home", "Away"])]
         results = splits.apply(
@@ -146,16 +142,9 @@ def hello():
 
     df["lastcol"] = "-"
 
-    output = io.StringIO()
-    df.to_csv(output, index=False)
-    output.seek(0)
+    df.to_csv("stats.csv", index=False)
 
-    response = make_response(output.read())
-    response.headers["Content-Disposition"] = "attachment; filename=data.csv"
-    response.headers["Content-Type"] = "text/csv"
-
-    return response
+    return
 
 
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8080, debug=True)
+hello()

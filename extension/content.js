@@ -283,6 +283,16 @@ function createTable(basediv, stype, stats) {
 }
 
 function matchupRank(basediv) {
+  var subheaders = document.querySelectorAll(
+    '[class="jsx-2810852873 table--cell opp ml4 header"]'
+  );
+  subheaders.forEach((subheader) => {
+    subheader.style =
+      "text-align: center!important; padding: 0px 10px!important; margin: 0px!important;";
+  });
+
+  console.log(subheaders);
+
   var allPlayers = document.querySelectorAll(
     '[class="AnchorLink link clr-link pointer"]'
   );
@@ -290,22 +300,15 @@ function matchupRank(basediv) {
     '[class="jsx-2810852873 table--cell opp ml4"]'
   );
 
-  var numRows = allPlayers.length;
-  var numColumns = allOppDivs.length / allPlayers.length;
+  const style = document.createElement("style");
+  style.textContent = 'span::after { content: ""!important; }';
+  document.head.appendChild(style);
 
   allOppDivs.forEach((opp, index) => {
-    var rowIndex;
-
-    if (opp.parentElement.parentElement.childNodes.length > 5) {
-      rowIndex = Math.floor(index / numColumns);
-    } else {
-      if (index < numRows) {
-        rowIndex = index;
-      } else {
-        rowIndex = Math.floor((index - numRows) / (numColumns - 1));
-      }
-    }
-
+    var rowIndex = Array.prototype.indexOf.call(
+      opp.parentElement.parentElement.parentElement.childNodes,
+      opp.parentElement.parentElement
+    );
     var player = allPlayers[rowIndex];
     var position =
       player.parentElement.parentElement.parentElement.childNodes[1]
@@ -313,25 +316,24 @@ function matchupRank(basediv) {
 
     if (!opp.innerHTML.includes("--")) {
       var rankSpan;
-      if (opp.firstChild.childNodes.length == 1) {
+      var existingRankSpan = opp.querySelectorAll(`.rank-span`);
+
+      if (existingRankSpan.length == 0) {
         rankSpan = document.createElement("span");
-        opp.firstChild.appendChild(rankSpan);
+        rankSpan.className = "rank-span";
       } else {
-        rankSpan = opp.firstChild.childNodes[1];
+        rankSpan = existingRankSpan[0];
+        opp.removeChild(rankSpan);
       }
-      var opponent;
-      if (index < numRows) {
-        opponent = opp.firstChild.firstChild.firstChild.innerHTML
-          .replace(/@/, "")
-          .toLowerCase()
-          .trim();
-      } else {
-        opponent = opp.firstChild.textContent
-          .replace(/@/, "")
-          .toLowerCase()
-          .trim();
-      }
-      console.log(opponent);
+
+      var opponentSpan = opp.querySelectorAll(
+        `span:not(.rank-span):not(:empty)`
+      )[0];
+      var opponent = opponentSpan.textContent
+        .replace(/@/, "")
+        .toLowerCase()
+        .trim();
+
       var rank = STATSHEET.filter((p) => {
         return p.Name.toLowerCase() === opponent;
       })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
@@ -350,169 +352,21 @@ function matchupRank(basediv) {
           ? "rgb(25, 25, 25)"
           : "rgb(204, 0, 0)";
 
-      rankSpan.innerHTML = `(${index}${rank}${suffix}${position})`;
-      opp.style = `color: ${color};`;
+      rankSpan.innerHTML = `&nbsp;(${rank}${suffix})`;
+      opp.style = `color: ${color}; display: flex; flex-direction: row; width: 100%; padding: 0px 5px!important; margin: 0px!important; justify-content:center;`;
+      opponentSpan.style = `color: ${color};`;
+      opp.appendChild(rankSpan);
+    } else {
+      var rankSpan = opp.querySelectorAll(`.rank-span`)[0];
+      opp.style = "text-align: center; margin-left:0px!important; width: 100%;";
+      // opp.querySelectorAll(`span:not(.rank-span):not(:empty)`)[0].style = "";
+      if (rankSpan) {
+        rankSpan.parentElement.style =
+          "text-align: center; margin: 0px!important; width: 100%;";
+        rankSpan.parentElement.innerHTML = "--";
+      }
     }
   });
-
-  // allPlayers.forEach((opp) => {
-  //   opp.innerHTML = "player";
-  // });
-
-  // console.log(allOppDivs);
-  // console.log(allPlayers);
-
-  // var rows;
-  // let headerSpan;
-  // var scroller;
-  // if (
-  //   basediv.firstChild.className.includes("Scroller") ||
-  //   basediv.childNodes[1].className.includes("Scroller")
-  // ) {
-  //   scroller = true;
-  //   console.log("in scroller");
-  //   var rows =
-  //     basediv.firstChild.childNodes[1].firstChild.childNodes[5].childNodes;
-  //   headerSpan =
-  //     basediv.firstChild.childNodes[1].firstChild.childNodes[4].childNodes[1]
-  //       .childNodes[3].firstChild.firstChild;
-  // } else {
-  //   scroller = false;
-  //   rows = basediv.firstChild.childNodes[4].childNodes;
-  //   headerSpan =
-  //     basediv.firstChild.childNodes[3].childNodes[1].childNodes[3].firstChild
-  //       .firstChild;
-  // }
-
-  // headerSpan.style = "text-align: center; padding-left: 5px;";
-  // headerSpan.parentElement.style = "margin: 0px!important;";
-
-  // rows.forEach((row, index) => {
-  //   var rankSpan;
-  //   row.childNodes[3].firstChild.style =
-  //     "margin: 0px!important; text-align: center; width: 100%; padding-right: 0px;";
-  //   if (row.childNodes[3].firstChild.innerHTML.substring(0, 2) !== "--") {
-  //     if (
-  //       row.childNodes[3].firstChild.firstChild.firstChild.childNodes.length ==
-  //       1
-  //     ) {
-  //       rankSpan = document.createElement("span");
-  //       rankSpan.innerHTML = "99";
-  //       row.childNodes[3].firstChild.firstChild.firstChild.appendChild(
-  //         rankSpan
-  //       );
-  //     } else {
-  //       rankSpan =
-  //         row.childNodes[3].firstChild.firstChild.firstChild.childNodes[1];
-  //     }
-
-  //     var oppBox = row.childNodes[3];
-  //     if (oppBox.firstChild.childNodes[0].data != "--") {
-  //       var oppSpan = oppBox.firstChild.firstChild.firstChild.firstChild;
-  //       var ogOpp = oppSpan.innerHTML.trim();
-  //       var opponent = ogOpp.replace(/@/, "");
-  //       if (opponent.indexOf("--") == -1) {
-  //         var position =
-  //           row.childNodes[0].firstChild.firstChild.childNodes[1].firstChild
-  //             .childNodes[1].childNodes[1].innerHTML;
-  //         var rank = STATSHEET.filter((p) => {
-  //           return p.Name.toLowerCase() === opponent.toLowerCase().trim();
-  //         })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
-
-  //         let suffix =
-  //           rank == 1 || rank == 21
-  //             ? "st"
-  //             : rank == 2 || rank == 22
-  //             ? "nd"
-  //             : rank == 3 || rank == 23
-  //             ? "rd"
-  //             : "th";
-
-  //         let color =
-  //           rank >= 20
-  //             ? "rgb(0, 148, 68)"
-  //             : rank >= 11
-  //             ? "rgb(25, 25, 25)"
-  //             : "rgb(204, 0, 0)";
-
-  //         rankSpan.innerHTML = `(${rank}${suffix})`;
-  //         rankSpan.style = `color: ${color}; text-align: center; padding-left: 5px`;
-  //         oppSpan.style = `color: ${color};`;
-  //       }
-  //     }
-  //   }
-
-  //   // Schedule
-  //   if (
-  //     document.querySelectorAll('[title="Upcoming Schedule"]').length !== null
-  //   ) {
-  //     var subheaders = document.querySelectorAll(
-  //       '[title="Upcoming Schedule"]'
-  //     )[0].parentElement.parentElement.childNodes[1].childNodes;
-  //     subheaders.forEach((subheader) => {
-  //       subheader.firstChild.firstChild.style = "text-align: center;";
-  //     });
-
-  //     var row2;
-  //     // var row2 = Array.from(document.querySelectorAll(`[data-idx="${index}"]`))
-  //     //   .sli.parentElement;
-
-  //     if (scroller) {
-  //       row2 = document.querySelectorAll(`[data-idx="${index}"]`)[0]
-  //         .parentElement;
-  //     } else {
-  //       console.log(basediv);
-  //       //row2 = Array.from(document.querySelectorAll(`[data-idx="${index}"]`))
-  //     }
-
-  //     Array.from(row2.childNodes).forEach((cell, index2) => {
-  //       console.log(cell);
-  //       cell.firstChild.style = "text-align: center";
-  //       var firstDiv = cell.firstChild.innerHTML;
-  //       if (firstDiv.indexOf("--") == -1) {
-  //         var opponent = cell.firstChild.firstChild.innerHTML
-  //           .replace(/@/, "")
-  //           .trim();
-  //         console.log(opponent);
-  //         var position =
-  //           row.childNodes[0].firstChild.firstChild.childNodes[1].firstChild
-  //             .childNodes[1].childNodes[1].innerHTML;
-  //         var rank = STATSHEET.filter((p) => {
-  //           return p.Name.toLowerCase() === opponent.toLowerCase().trim();
-  //         })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
-
-  //         let suffix =
-  //           rank == 1 || rank == 21
-  //             ? "st"
-  //             : rank == 2 || rank == 22
-  //             ? "nd"
-  //             : rank == 3 || rank == 23
-  //             ? "rd"
-  //             : "th";
-
-  //         let color =
-  //           rank >= 20
-  //             ? "rgb(0, 148, 68)"
-  //             : rank >= 11
-  //             ? "rgb(25, 25, 25)"
-  //             : "rgb(204, 0, 0)";
-
-  //         var rankSpan = document.getElementById(
-  //           `rank-span-${index}-${index2}`
-  //         );
-  //         if (rankSpan) {
-  //         } else {
-  //           rankSpan = document.createElement("span");
-  //           rankSpan.id = `rank-span-${index}-${index2}`;
-  //           cell.firstChild.firstChild.appendChild(rankSpan);
-  //         }
-  //         rankSpan.innerHTML = `(${rank}${suffix})`;
-  //         rankSpan.style = `padding-left: 5px`;
-  //         cell.firstChild.style = `color: ${color}!important; text-align: center;`;
-  //       }
-  //     });
-  //   }
-  // });
 }
 
 async function getStatSheet() {
@@ -591,7 +445,7 @@ function insertData(basediv, stattype, stats) {
     }
 
     if (
-      JSON.parse(localStorage.getItem("addon-config")).color &&
+      JSON.parse(localStorage.getItem("addon-config")).other.includes("cc") &&
       counter === premadetable.length
     ) {
       colorCode(stattype, stats);
