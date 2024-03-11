@@ -85,24 +85,23 @@ def hello():
     battingStats = batting_stats(2023, qual=1)[battingCategories]
     battingStats.rename(columns={"IDfg": "key_fangraphs"}, inplace=True)
 
-    ids = playerid_reverse_lookup(
-        battingStats["key_fangraphs"].tolist(), key_type="fangraphs"
-    )[["key_bbref", "key_fangraphs"]]
-
-    battingStats = pd.merge(battingStats, ids, on="key_fangraphs")
-    battingStats["Home"] = ""
-    battingStats["Away"] = ""
+    # ids = playerid_reverse_lookup(
+    #     battingStats["key_fangraphs"].tolist(), key_type="fangraphs"
+    # )[["key_bbref", "key_fangraphs"]]
+    # battingStats = pd.merge(battingStats, ids, on="key_fangraphs")
+    # battingStats["Home"] = ""
+    # battingStats["Away"] = ""
 
     # get batting splits
-    for index, row in battingStats.head(3).iterrows():
-        df = get_splits(row["key_bbref"], year=2023)
-        splits = df.loc[df.index.get_level_values(1).isin(["Home", "Away"])]
-        results = splits.apply(
-            lambda row: row["H"] - row["SO"] + row["BB"] + row["R"] * 2 * 0.92,
-            axis=1,
-        )
-        battingStats.at[index, "Home"] = results.loc[("Home or Away", "Home")]
-        battingStats.at[index, "Away"] = results.loc[("Home or Away", "Away")]
+    # for index, row in battingStats.head(3).iterrows():
+    #     df = get_splits(row["key_bbref"], year=2023)
+    #     splits = df.loc[df.index.get_level_values(1).isin(["Home", "Away"])]
+    #     results = splits.apply(
+    #         lambda row: row["H"] - row["SO"] + row["BB"] + row["R"] * 2 * 0.92,
+    #         axis=1,
+    #     )
+    #     battingStats.at[index, "Home"] = results.loc[("Home or Away", "Home")]
+    #     battingStats.at[index, "Away"] = results.loc[("Home or Away", "Away")]
 
     pdf = pitching_stats(2023, qual=1)[pitchingCategories]
     oppdf = team_batting(2023)
@@ -158,4 +157,4 @@ def hello():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8080, debug=True)
+    app.run(host="localhost", port=8080, debug=True)

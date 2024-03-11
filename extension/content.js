@@ -37,22 +37,30 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   }
 });
 
+// ------------------------- Observer to start on page load -------------------------- //
+
 const targetNode = document.getElementById("__next-wrapper");
 
-var RUNNING = false;
+var firstLoad = true;
+let debounceTimeout;
+
 const callback = (mutationList, observer) => {
-  if (!RUNNING) {
-    for (const mutation of mutationList) {
-      if (
-        mutation.type == "attributes" &&
-        mutation.target.tagName === "IMG" &&
-        mutation.target.className.includes("jsx")
-      ) {
-        console.log("start addon");
-        RUNNING = true;
-        initiate();
-      }
+  var triggerInititate = false;
+  for (const mutation of mutationList) {
+    if (
+      mutation.type == "attributes" &&
+      mutation.target.tagName === "IMG" &&
+      mutation.target.className.includes("jsx")
+    ) {
+      triggerInititate = true;
     }
+  }
+  if (triggerInititate) {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+      console.log("initiating");
+      initiate();
+    }, 1000); // Adjust debounce delay as needed
   }
 };
 
@@ -64,64 +72,88 @@ observer.observe(targetNode, {
   subtree: true,
 });
 
+// ------------------------- Observer to re-initialize on date change -------------------------- //
+
+let hasChanged = false;
+let timeoutId;
+
+const dateObserver = new MutationObserver(function (mutationsList, observer) {
+  clearTimeout(timeoutId);
+
+  timeoutId = setTimeout(() => {
+    if (hasChanged) {
+      console.log("Date changed - initializing");
+      initiate();
+      hasChanged = false;
+    }
+  }, 1000);
+
+  for (const mutation of mutationsList) {
+    if (mutation.type === "childList" || mutation.type === "characterData") {
+      hasChanged = true;
+    }
+  }
+});
+
 // ------------------------- Actual program -------------------------- //
 
 var STATSHEET;
-// getStatSheet().then((res) => {
-//   STATSHEET = res;
-//   console.log(`loaded statsheet ${STATSHEET.length}`);
-// });
+var settings;
 
 async function initiate() {
   STATSHEET = await getStatSheet();
+  settings = JSON.parse(localStorage.getItem("addon-config"));
   console.log(`loaded statsheet ${STATSHEET.length}`);
   let response = getBaseDiv();
   setHandlers();
   mainProgram(response);
+  console.log("done");
+}
+
+async function getStatSheet() {
+  const URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxN3BwvlA5XdWCyukmR0o1myMbaShQieuLI5B7bHb3WwuhXCBbXX5b_zNngBj3kcczcni4lnhX7zEq/pub?gid=0&single=true&output=csv";
+
+  const response = await fetch(URL);
+  const data = await response.text();
+
+  const lines = data.split("\n");
+  const headers = lines[0].split(",");
+  const result = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const obj = {};
+    const currentLine = lines[i].split(",");
+
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = currentLine[j];
+    }
+
+    result.push(obj);
+  }
+
+  return result;
 }
 
 function getBaseDiv() {
-  var temp = "";
-  var basediv = "";
-  var teamonly = ["", ""];
   var response = { found: false, element: {}, type: "" };
 
+  // Players page
   if (!window.location.href.includes("fantasy.espn.com/baseball/team")) {
     var battersTitle = document.querySelectorAll('[title="Batters"]')[0];
     var pitchersTitle = document.querySelectorAll('[title="Pitchers"]')[0];
 
-    response.found = battersTitle !== undefined || pitchersTitle !== undefined;
-    if (!response.found) {
-      return response;
+    if (battersTitle !== undefined || pitchersTitle !== undefined) {
+      response.found = true;
+      response.element = document.querySelectorAll('[class="flex"]')[0];
+      response.type = battersTitle !== undefined ? "batting" : "pitching";
     }
-
-    response.element = document.querySelectorAll('[class="flex"]')[0];
-    response.type = battersTitle !== undefined ? "batting" : "pitching";
-
+    return response;
+  } else {
+    response.element = Array.from(document.querySelectorAll('[class="flex"]'));
+    response.found = response.element.length == 2;
     return response;
   }
-
-  Array.from(document.getElementsByTagName("th")).forEach((element) => {
-    const title = element.getAttribute("title");
-    if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
-      if (title === "Batters") {
-        teamonly[0] =
-          element.parentElement.parentElement.parentElement.parentElement;
-        teamonly[0]
-          .querySelectorAll("tr")
-          .forEach((tr) => tr.setAttribute("table", "batting"));
-      } else if (title === "Pitchers") {
-        teamonly[1] =
-          element.parentElement.parentElement.parentElement.parentElement;
-        teamonly[1]
-          .querySelectorAll("tr")
-          .forEach((tr) => tr.setAttribute("table", "pitching"));
-      }
-      if (teamonly[0] !== "" && teamonly[1] !== "") {
-        basediv = teamonly;
-      }
-    }
-  });
 
   var navbar = document.querySelectorAll(`[role="tablist"]`)[0];
   if (navbar !== undefined) {
@@ -154,56 +186,159 @@ function setHandlers() {
     attributes: true,
     childList: true, //, subtree: true
   });
+
+  // observer for dates
+  const elements = document.querySelectorAll(
+    ".jsx-2810852873.table--cell.game-status.tl"
+  );
+  elements.forEach((element) => {
+    dateObserver.observe(element, {
+      subtree: true,
+      characterData: true,
+      childList: true,
+    });
+  });
 }
 
 function mainProgram(basediv) {
   if (!basediv["found"]) {
-    // Wrong page (no stat tables)
     return;
   } else {
-    const settings = JSON.parse(localStorage.getItem("addon-config"));
-
     if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
-      if (settings["other"].contains("or")) {
-        matchupRank(basediv["element"][0]);
+      matchupRank(basediv["element"][0]);
+      matchupRank(basediv["element"][1]);
+      if (settings["batting"].length > 0) {
+        createTable(basediv["element"][0], "batting", settings["batting"]);
+        insertData("batting", settings["batting"]);
+        colorCode("batting", settings["batting"]);
       }
-      var stats = settings["batting"];
-      if (stats.length > 0) {
-        createTable(basediv["element"][0], "batting", stats);
-        insertData(basediv["element"][0], "batting", stats);
-      }
-      stats = settings["pitching"];
-      if (stats.length > 0) {
-        createTable(basediv["element"][1], "pitching", stats);
-        insertData(basediv["element"][1], "pitching", stats);
+      if (settings["pitching"].length > 0) {
+        createTable(basediv["element"][1], "pitching", settings["pitching"]);
+        insertData("pitching", settings["pitching"]);
+        colorCode("pitching", settings["pitching"]);
       }
     } else {
-      if (settings["other"].includes("or")) {
-        matchupRank(basediv["element"]);
-      }
+      matchupRank(basediv["element"]);
       var stats = settings[basediv["type"]];
       if (stats.length > 0) {
         createTable(basediv["element"], basediv["type"], stats);
-        insertData(basediv["element"], basediv["type"], stats);
+        insertData(basediv["type"], stats);
+        colorCode(basediv["type"], stats);
       }
     }
   }
 }
 
+function matchupRank(basediv) {
+  if (!settings["other"].includes("or")) {
+    return;
+  }
+
+  var subheaders = basediv.querySelectorAll(
+    '[class="jsx-2810852873 table--cell opp ml4 header"]'
+  );
+  subheaders.forEach((subheader) => {
+    subheader.style =
+      "text-align: center!important; padding: 0px 10px!important; margin: 0px!important;";
+  });
+
+  const allPlayers = Array.from(
+    basediv.querySelectorAll('[class="AnchorLink link clr-link pointer"]')
+  ).filter(
+    (player) =>
+      !player.textContent.includes("(") && !player.textContent.includes(")")
+  );
+  var allOppDivs = basediv.querySelectorAll(
+    '[class="jsx-2810852873 table--cell opp ml4"]'
+  );
+
+  const style = document.createElement("style");
+  style.textContent = 'span::after { content: ""!important; }';
+  document.head.appendChild(style);
+
+  allOppDivs.forEach((opp, index) => {
+    var rowIndex = Array.prototype.indexOf.call(
+      opp.parentElement.parentElement.parentElement.childNodes,
+      opp.parentElement.parentElement
+    );
+    var player = allPlayers[rowIndex];
+    if (player) {
+      var position =
+        player.parentElement.parentElement.parentElement.childNodes[1]
+          .childNodes[1].innerHTML;
+      if (!opp.innerHTML.includes("--")) {
+        var rankSpan;
+        var existingRankSpan = opp.querySelectorAll(`.rank-span`);
+
+        if (existingRankSpan.length == 0) {
+          rankSpan = document.createElement("span");
+          rankSpan.className = "rank-span";
+        } else {
+          rankSpan = existingRankSpan[0];
+          opp.removeChild(rankSpan);
+        }
+
+        var opponentSpan = opp.querySelectorAll(
+          `span:not(.rank-span):not(:empty)`
+        )[0];
+        var opponent = opponentSpan.textContent
+          .replace(/@/, "")
+          .toLowerCase()
+          .trim();
+
+        var rank = STATSHEET.filter((p) => {
+          return p.Name.toLowerCase() === opponent;
+        })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
+        let suffix =
+          rank == 1 || rank == 21
+            ? "st"
+            : rank == 2 || rank == 22
+            ? "nd"
+            : rank == 3 || rank == 23
+            ? "rd"
+            : "th";
+        let color =
+          rank >= 20
+            ? "rgb(0, 148, 68)"
+            : rank >= 11
+            ? "rgb(25, 25, 25)"
+            : "rgb(204, 0, 0)";
+
+        rankSpan.innerHTML = `&nbsp;(${rank}${suffix})`;
+        opp.style = `color: ${color}; display: flex; flex-direction: row; width: 100%; padding: 0px 5px!important; margin: 0px!important; justify-content:center;`;
+        opponentSpan.style = `color: ${color};`;
+        opp.appendChild(rankSpan);
+      } else {
+        var rankSpan = opp.querySelectorAll(`.rank-span`)[0];
+        if (rankSpan) {
+          var parent = rankSpan.parentElement;
+          parent.childNodes.forEach((child) => {
+            parent.removeChild(child);
+          });
+        }
+      }
+    } else {
+      // Empty spot
+    }
+  });
+}
+
 function createTable(basediv, stype, stats) {
-  var scroller = basediv.firstChild.className.includes("Scroller");
+  var headshots;
 
   if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
-    var masterList = basediv.firstChild.childNodes[3];
+    headshots = Array.from(
+      basediv.querySelectorAll('[class="jsx-3743397412 player-headshot"]')
+    );
     var oldTable = document.getElementById(`advanced-table-${stype}`);
     oldTable?.remove();
   } else {
-    var masterList;
-    if (scroller) {
-      masterList = basediv.firstChild.childNodes[1].firstChild.childNodes[5];
-    } else {
-      masterList = basediv.firstChild.childNodes[4];
-    }
+    headshots = Array.from(
+      basediv.querySelectorAll('[class="AnchorLink link clr-link pointer"]')
+    ).filter(
+      (player) =>
+        !player.textContent.includes("(") && !player.textContent.includes(")")
+    );
     var oldTable = document.getElementById(`advanced-table-batting`);
     oldTable?.remove();
     oldTable = document.getElementById(`advanced-table-pitching`);
@@ -252,226 +387,93 @@ function createTable(basediv, stype, stats) {
   var tbody = document.createElement("tbody");
   tbody.className = "Table__TBODY";
 
-  // Populate the table with rows and cells
-  for (let i = 0; i < masterList.childNodes.length; i++) {
+  headshots.forEach((headshot, index) => {
+    var playerName =
+      headshot.parentElement.childNodes.length > 1
+        ? headshot.parentElement.childNodes[1].firstChild.firstChild.firstChild
+            .firstChild.textContent
+        : "empty";
+
+    var playerTeam =
+      headshot.parentElement.childNodes.length > 1
+        ? headshot.parentElement.childNodes[1].firstChild.childNodes[1]
+            .firstChild.textContent
+        : "empty";
+
     const row = document.createElement("tr");
     row.className = "Table__TR Table__TR--lg Table__odd";
     row.setAttribute("style", "height: auto;");
-    row.setAttribute("data-idx", i);
+    row.setAttribute("data-idx", index);
+    row.setAttribute("player-name", playerName);
+    row.setAttribute("player-team", playerTeam);
     stats.forEach((stat) => {
       const cell = document.createElement("td");
       cell.className = "Table__TD";
       const tempdiv = document.createElement("div");
       tempdiv.className = `jsx-2810852873 table--cell tar ${stat}-div`;
-      tempdiv.id = `${stat}-idx-${i}-div`;
+      tempdiv.id = `${stat}-idx-${index}-div`;
       cell.appendChild(tempdiv);
       const tempspan = document.createElement("span");
       tempspan.innerHTML = `---`;
-      tempspan.id = `${stat}-idx-${i}`;
-      tempspan.setAttribute("idx", i);
+      tempspan.id = `${stat}-idx-${index}`;
+      tempspan.setAttribute("idx", index);
       tempspan.className = `${stat}-span`;
       tempdiv.appendChild(tempspan);
       row.appendChild(cell);
     });
     tbody.appendChild(row);
-  }
+  });
 
-  // Append the table to the div element
   table.appendChild(thead);
   table.appendChild(tbody);
   basediv.appendChild(table);
 }
 
-function matchupRank(basediv) {
-  var subheaders = document.querySelectorAll(
-    '[class="jsx-2810852873 table--cell opp ml4 header"]'
-  );
-  subheaders.forEach((subheader) => {
-    subheader.style =
-      "text-align: center!important; padding: 0px 10px!important; margin: 0px!important;";
-  });
-
-  console.log(subheaders);
-
-  var allPlayers = document.querySelectorAll(
-    '[class="AnchorLink link clr-link pointer"]'
-  );
-  var allOppDivs = document.querySelectorAll(
-    '[class="jsx-2810852873 table--cell opp ml4"]'
-  );
-
-  const style = document.createElement("style");
-  style.textContent = 'span::after { content: ""!important; }';
-  document.head.appendChild(style);
-
-  allOppDivs.forEach((opp, index) => {
-    var rowIndex = Array.prototype.indexOf.call(
-      opp.parentElement.parentElement.parentElement.childNodes,
-      opp.parentElement.parentElement
-    );
-    var player = allPlayers[rowIndex];
-    var position =
-      player.parentElement.parentElement.parentElement.childNodes[1]
-        .childNodes[1].innerHTML;
-
-    if (!opp.innerHTML.includes("--")) {
-      var rankSpan;
-      var existingRankSpan = opp.querySelectorAll(`.rank-span`);
-
-      if (existingRankSpan.length == 0) {
-        rankSpan = document.createElement("span");
-        rankSpan.className = "rank-span";
-      } else {
-        rankSpan = existingRankSpan[0];
-        opp.removeChild(rankSpan);
-      }
-
-      var opponentSpan = opp.querySelectorAll(
-        `span:not(.rank-span):not(:empty)`
-      )[0];
-      var opponent = opponentSpan.textContent
-        .replace(/@/, "")
-        .toLowerCase()
-        .trim();
-
-      var rank = STATSHEET.filter((p) => {
-        return p.Name.toLowerCase() === opponent;
-      })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
-      let suffix =
-        rank == 1 || rank == 21
-          ? "st"
-          : rank == 2 || rank == 22
-          ? "nd"
-          : rank == 3 || rank == 23
-          ? "rd"
-          : "th";
-      let color =
-        rank >= 20
-          ? "rgb(0, 148, 68)"
-          : rank >= 11
-          ? "rgb(25, 25, 25)"
-          : "rgb(204, 0, 0)";
-
-      rankSpan.innerHTML = `&nbsp;(${rank}${suffix})`;
-      opp.style = `color: ${color}; display: flex; flex-direction: row; width: 100%; padding: 0px 5px!important; margin: 0px!important; justify-content:center;`;
-      opponentSpan.style = `color: ${color};`;
-      opp.appendChild(rankSpan);
-    } else {
-      var rankSpan = opp.querySelectorAll(`.rank-span`)[0];
-      opp.style = "text-align: center; margin-left:0px!important; width: 100%;";
-      // opp.querySelectorAll(`span:not(.rank-span):not(:empty)`)[0].style = "";
-      if (rankSpan) {
-        rankSpan.parentElement.style =
-          "text-align: center; margin: 0px!important; width: 100%;";
-        rankSpan.parentElement.innerHTML = "--";
-      }
-    }
-  });
-}
-
-async function getStatSheet() {
-  const URL =
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxN3BwvlA5XdWCyukmR0o1myMbaShQieuLI5B7bHb3WwuhXCBbXX5b_zNngBj3kcczcni4lnhX7zEq/pub?gid=0&single=true&output=csv";
-
-  const response = await fetch(URL);
-  const data = await response.text();
-
-  const lines = data.split("\n");
-  const headers = lines[0].split(",");
-  const result = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const obj = {};
-    const currentLine = lines[i].split(",");
-
-    for (let j = 0; j < headers.length; j++) {
-      obj[headers[j]] = currentLine[j];
-    }
-
-    result.push(obj);
-  }
-
-  return result;
-}
-
-function insertData(basediv, stattype, stats) {
-  var premadetable = document.getElementById(`advanced-table-${stattype}`)
+function insertData(stattype, stats) {
+  var premadeTableRows = document.getElementById(`advanced-table-${stattype}`)
     .childNodes[1].childNodes;
-  var counter = 0;
-  premadetable.forEach(async (player, index) => {
-    counter += 1;
-    if (player === undefined) {
+
+  premadeTableRows.forEach((row, index) => {
+    if (row === undefined) {
       return;
     }
-    if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
-      try {
-        var playerName = document.querySelectorAll(
-          `[data-idx="${index}"][table=${stattype}]`
-        )[0].childNodes[1].firstChild.firstChild.childNodes[1].firstChild
-          .firstChild.firstChild.firstChild.innerHTML;
-        var playerTeam = document.querySelectorAll(
-          `[data-idx="${index}"][table=${stattype}]`
-        )[0].childNodes[1].firstChild.firstChild.childNodes[1].firstChild
-          .childNodes[1].firstChild.innerHTML;
-      } catch (error) {
-        if (playerName !== undefined) {
-          console.log(error);
-        }
-      }
+
+    var playerName = row.getAttribute("player-name");
+    var playerTeam = row.getAttribute("player-team");
+
+    if (playerName === undefined || playerName == "empty") {
+      return;
+    }
+
+    let data = STATSHEET.filter(
+      (p) => p.Name.toLowerCase() === playerName.toLowerCase()
+    );
+    if (data.length > 1) {
+      data = data.filter((p) => p.Team === playerTeam);
+    }
+
+    if (data.length === 0) {
+      console.log(`Could not find data for ${playerName}. Contact author`);
+    } else if (data.length > 1) {
+      console.log(`Multiple entries for ${playerName}.`);
     } else {
-      var playerName = document.querySelectorAll(`[data-idx="${index}"]`)[0]
-        .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
-        .childNodes[0].childNodes[0].childNodes[0].innerHTML;
-      var playerTeam = document.querySelectorAll(`[data-idx="${index}"]`)[0]
-        .childNodes[0].childNodes[0].childNodes[0].childNodes[1].childNodes[0]
-        .childNodes[1].childNodes[0].innerHTML;
-    }
-
-    if (playerName === undefined) {
-      return;
-    }
-
-    const data = getPlayerData(playerName, playerTeam);
-
-    if (data !== null) {
       stats.forEach((stat) => {
         document.getElementById(`${stat}-idx-${index}`).innerHTML =
           "&nbsp" +
-          parseFloat(data[stat]).toFixed(
+          parseFloat(data[0][stat]).toFixed(
             STATS_CONFIG[stattype][stat]["round"]
           ) +
           "&nbsp";
       });
     }
-
-    if (
-      JSON.parse(localStorage.getItem("addon-config")).other.includes("cc") &&
-      counter === premadetable.length
-    ) {
-      colorCode(stattype, stats);
-    }
   });
 }
 
-function getPlayerData(name, team) {
-  let matches = STATSHEET.filter(
-    (p) => p.Name.toLowerCase() === name.toLowerCase()
-  );
-  if (matches.length > 1) {
-    matches = matches.filter((p) => p.Team === team);
-  }
-  if (matches.length === 0) {
-    console.log(`Could not find data for ${name}. Contact author`);
-    return null;
-  } else if (matches.length === 1) {
-    return matches[0];
-  } else {
-    console.log(`Multiple entries for ${name}.`);
-    return null;
-  }
-}
-
 function colorCode(stattype, stats) {
+  if (!JSON.parse(localStorage.getItem("addon-config")).other.includes("cc")) {
+    return;
+  }
+
   stats.forEach((stat) => {
     var elems = document.getElementsByClassName(`${stat}-span`);
     var values = [];
