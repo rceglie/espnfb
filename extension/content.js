@@ -207,6 +207,17 @@ function mainProgram(basediv) {
     if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
       matchupRank(basediv["element"][0]);
       matchupRank(basediv["element"][1]);
+
+      if (
+        !JSON.parse(
+          document
+            .querySelector('li[title="Stats"]')
+            .getAttribute("aria-selected")
+        )
+      ) {
+        return;
+      }
+
       if (settings["batting"].length > 0) {
         createTable(basediv["element"][0], "batting", settings["batting"]);
         insertData("batting", settings["batting"]);
@@ -324,21 +335,14 @@ function matchupRank(basediv) {
 }
 
 function createTable(basediv, stype, stats) {
-  var headshots;
+  var headshots = Array.from(
+    basediv.querySelectorAll('[class="jsx-3743397412 player-headshot"]')
+  );
 
   if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
-    headshots = Array.from(
-      basediv.querySelectorAll('[class="jsx-3743397412 player-headshot"]')
-    );
     var oldTable = document.getElementById(`advanced-table-${stype}`);
     oldTable?.remove();
   } else {
-    headshots = Array.from(
-      basediv.querySelectorAll('[class="AnchorLink link clr-link pointer"]')
-    ).filter(
-      (player) =>
-        !player.textContent.includes("(") && !player.textContent.includes(")")
-    );
     var oldTable = document.getElementById(`advanced-table-batting`);
     oldTable?.remove();
     oldTable = document.getElementById(`advanced-table-pitching`);

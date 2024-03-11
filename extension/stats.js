@@ -84,7 +84,7 @@ const STATS = {
       color: false,
       round: 2,
       tooltip:
-        "<strong>dERA (ERA Difference):</strong> Difference between actual ERA and xERA. Can be used to estimate over or underperformance.",
+        "<strong>dERA (ERA Difference):</strong> Difference between actual ERA and xERA. Can be used to estimate over or underperformance. Higher number = overperforming, expect regression (worse future performance). Lower number = underperforming, expect better future performance.",
     },
     "ERA-": {
       color: false,
@@ -108,7 +108,7 @@ const STATS = {
       color: false,
       round: 2,
       tooltip:
-        "<strong>dFIP (FIP Difference):</strong> Difference between actual FIP and xFIP. Can be used to estimate over or underperformance.",
+        "<strong>dFIP (FIP Difference):</strong> Difference between actual FIP and xFIP. Can be used to estimate over or underperformance. Higher number = overperforming, expect regression (worse future performance). Lower number = underperforming, expect better future performance.",
     },
     "FIP-": {
       color: false,
@@ -118,15 +118,15 @@ const STATS = {
     },
     "xFIP-": {
       color: false,
-      round: 2,
+      round: 0,
       tooltip:
         "<strong>xFIP- (Expected FIP-):</strong> Uses league averages and other advanced stats to determine what a player's FIP- should be.",
     },
     "dFIP-": {
       color: false,
-      round: 2,
+      round: 0,
       tooltip:
-        "<strong>dFIP- (FIP- Difference):</strong> Difference between actual FIP- and xFIP-. Can be used to estimate over or underperformance.",
+        "<strong>dFIP- (FIP- Difference):</strong> Difference between actual FIP- and xFIP-. Can be used to estimate over or underperformance. Higher number = overperforming, expect regression (worse future performance). Lower number = underperforming, expect better future performance.",
     },
     WHIP: {
       color: false,

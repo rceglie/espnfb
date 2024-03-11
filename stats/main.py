@@ -33,6 +33,7 @@ pitchingCategories = [
     "Team",
     "ERA",
     "ERA-",
+    "xERA",
     "FIP",
     "xFIP",
     "FIP-",
@@ -82,8 +83,15 @@ nameCorrections = {
 
 @app.route("/")
 def hello():
+
     battingStats = batting_stats(2023, qual=1)[battingCategories]
-    battingStats.rename(columns={"IDfg": "key_fangraphs"}, inplace=True)
+    battingStats["dAVG"] = battingStats["xBA"] - battingStats["AVG"]
+    battingStats["dwOBA"] = battingStats["xwOBA"] - battingStats["wOBA"]
+
+    pitchingStats = pitching_stats(2023, qual=1)[pitchingCategories]
+    pitchingStats["dERA"] = pitchingStats["xERA"] - pitchingStats["ERA"]
+    pitchingStats["dFIP"] = pitchingStats["xFIP"] - pitchingStats["FIP"]
+    pitchingStats["dFIP-"] = pitchingStats["xFIP-"] - pitchingStats["FIP-"]
 
     # ids = playerid_reverse_lookup(
     #     battingStats["key_fangraphs"].tolist(), key_type="fangraphs"
@@ -103,7 +111,6 @@ def hello():
     #     battingStats.at[index, "Home"] = results.loc[("Home or Away", "Home")]
     #     battingStats.at[index, "Away"] = results.loc[("Home or Away", "Away")]
 
-    pdf = pitching_stats(2023, qual=1)[pitchingCategories]
     oppdf = team_batting(2023)
     oppdf["Points"] = oppdf.apply(
         lambda row: row["H"] - row["SO"] + row["BB"] + row["R"] * 2 * 0.92,
@@ -125,7 +132,7 @@ def hello():
     df = pd.concat(
         [
             battingStats,
-            pdf,
+            pitchingStats,
             oppdf[["Name", "PRank", "Team"]],
             boppdf[["Name", "BRank", "Team"]],
         ],
