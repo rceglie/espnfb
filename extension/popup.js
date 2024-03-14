@@ -206,15 +206,12 @@ Array.from(document.getElementsByClassName("checkbox-wrapper-21")).forEach(
   }
 );
 
-// [activeTabs]
 // Get config from brower localStorage
 chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
   chrome.tabs.sendMessage(
     tabs[0].id,
     { message: "requesting config" },
     function (res) {
-      console.log("got config");
-      console.log(res);
       res = res.response;
       if (
         (config, res) =>
@@ -223,8 +220,6 @@ chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       ) {
         config = res;
       }
-      console.log(config);
-      document.getElementById("color-code").checked = config.color;
       Array.prototype.slice
         .call(document.getElementsByClassName("batting"))
         .forEach((item) => {
@@ -253,13 +248,3 @@ function updateBrowser() {
     });
   });
 }
-
-// document.getElementById("color-code").addEventListener("click", function () {
-//   config.color = this.checked;
-//   updateBrowser();
-// });
-
-// document.getElementById("color-code").addEventListener("click", function () {
-//   config.color = this.checked;
-//   updateBrowser();
-// });

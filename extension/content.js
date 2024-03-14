@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.message === "requesting config") {
     if (localStorage.getItem("addon-config") === null) {
       sendResponse({
-        response: { batting: [], pitching: [], misc: [], color: false },
+        response: { batting: [], pitching: [], other: [] },
       });
     } else {
       sendResponse({
