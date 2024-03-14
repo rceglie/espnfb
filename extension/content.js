@@ -205,8 +205,8 @@ function mainProgram(basediv) {
     return;
   } else {
     if (window.location.href.includes("fantasy.espn.com/baseball/team")) {
-      matchupRank(basediv["element"][0]);
-      matchupRank(basediv["element"][1]);
+      matchupRank(basediv["element"][0], "batting");
+      matchupRank(basediv["element"][1], "pitching");
 
       if (
         !JSON.parse(
@@ -229,7 +229,7 @@ function mainProgram(basediv) {
         colorCode("pitching", settings["pitching"]);
       }
     } else {
-      matchupRank(basediv["element"]);
+      matchupRank(basediv["element"], basediv["type"]);
       var stats = settings[basediv["type"]];
       if (stats.length > 0) {
         createTable(basediv["element"], basediv["type"], stats);
@@ -240,7 +240,7 @@ function mainProgram(basediv) {
   }
 }
 
-function matchupRank(basediv) {
+function matchupRank(basediv, type) {
   if (!settings["other"].includes("or")) {
     return;
   }
@@ -253,12 +253,6 @@ function matchupRank(basediv) {
       "text-align: center!important; padding: 0px 10px!important; margin: 0px!important;";
   });
 
-  const allPlayers = Array.from(
-    basediv.querySelectorAll('[class="AnchorLink link clr-link pointer"]')
-  ).filter(
-    (player) =>
-      !player.textContent.includes("(") && !player.textContent.includes(")")
-  );
   var allOppDivs = basediv.querySelectorAll(
     '[class="jsx-2810852873 table--cell opp ml4"]'
   );
@@ -268,68 +262,56 @@ function matchupRank(basediv) {
   document.head.appendChild(style);
 
   allOppDivs.forEach((opp, index) => {
-    var rowIndex = Array.prototype.indexOf.call(
-      opp.parentElement.parentElement.parentElement.childNodes,
-      opp.parentElement.parentElement
-    );
-    var player = allPlayers[rowIndex];
-    if (player) {
-      var position =
-        player.parentElement.parentElement.parentElement.childNodes[1]
-          .childNodes[1].innerHTML;
-      if (!opp.innerHTML.includes("--")) {
-        var rankSpan;
-        var existingRankSpan = opp.querySelectorAll(`.rank-span`);
+    if (!opp.innerHTML.includes("--")) {
+      var rankSpan;
+      var existingRankSpan = opp.querySelectorAll(`.rank-span`);
 
-        if (existingRankSpan.length == 0) {
-          rankSpan = document.createElement("span");
-          rankSpan.className = "rank-span";
-        } else {
-          rankSpan = existingRankSpan[0];
-          opp.removeChild(rankSpan);
-        }
-
-        var opponentSpan = opp.querySelectorAll(
-          `span:not(.rank-span):not(:empty)`
-        )[0];
-        var opponent = opponentSpan.textContent
-          .replace(/@/, "")
-          .toLowerCase()
-          .trim();
-
-        var rank = STATSHEET.filter((p) => {
-          return p.Name.toLowerCase() === opponent;
-        })[0][position.slice(0, 2).includes("P") ? "PRank" : "BRank"];
-        let suffix =
-          rank == 1 || rank == 21
-            ? "st"
-            : rank == 2 || rank == 22
-            ? "nd"
-            : rank == 3 || rank == 23
-            ? "rd"
-            : "th";
-        let color =
-          rank >= 20
-            ? "rgb(0, 148, 68)"
-            : rank >= 11
-            ? "rgb(25, 25, 25)"
-            : "rgb(204, 0, 0)";
-
-        rankSpan.innerHTML = `&nbsp;(${rank}${suffix})`;
-        opp.style = `color: ${color}; display: flex; flex-direction: row; width: 100%; padding: 0px 5px!important; margin: 0px!important; justify-content:center;`;
-        opponentSpan.style = `color: ${color};`;
-        opp.appendChild(rankSpan);
+      if (existingRankSpan.length == 0) {
+        rankSpan = document.createElement("span");
+        rankSpan.className = "rank-span";
       } else {
-        var rankSpan = opp.querySelectorAll(`.rank-span`)[0];
-        if (rankSpan) {
-          var parent = rankSpan.parentElement;
-          parent.childNodes.forEach((child) => {
-            parent.removeChild(child);
-          });
-        }
+        rankSpan = existingRankSpan[0];
+        opp.removeChild(rankSpan);
       }
+
+      var opponentSpan = opp.querySelectorAll(
+        `span:not(.rank-span):not(:empty)`
+      )[0];
+      var opponent = opponentSpan.textContent
+        .replace(/@/, "")
+        .toLowerCase()
+        .trim();
+
+      var rank = STATSHEET.filter((p) => {
+        return p.Name.toLowerCase() === opponent;
+      })[0][type == "pitching" ? "PRank" : "BRank"];
+      let suffix =
+        rank == 1 || rank == 21
+          ? "st"
+          : rank == 2 || rank == 22
+          ? "nd"
+          : rank == 3 || rank == 23
+          ? "rd"
+          : "th";
+      let color =
+        rank >= 20
+          ? "rgb(0, 148, 68)"
+          : rank >= 11
+          ? "rgb(25, 25, 25)"
+          : "rgb(204, 0, 0)";
+
+      rankSpan.innerHTML = `&nbsp;(${rank}${suffix})`;
+      opp.style = `color: ${color}; display: flex; flex-direction: row; width: 100%; padding: 0px 5px!important; margin: 0px!important; justify-content:center;`;
+      opponentSpan.style = `color: ${color};`;
+      opp.appendChild(rankSpan);
     } else {
-      // Empty spot
+      var rankSpan = opp.querySelectorAll(`.rank-span`)[0];
+      if (rankSpan) {
+        var parent = rankSpan.parentElement;
+        parent.childNodes.forEach((child) => {
+          parent.removeChild(child);
+        });
+      }
     }
   });
 }
